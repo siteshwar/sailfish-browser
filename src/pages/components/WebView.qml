@@ -177,11 +177,6 @@ WebContainer {
                     } else {
                         container.decoratorColor =  Theme.highlightBackgroundColor
                     }
-
-                    sendAsyncMessage("Browser:SelectionColorUpdate",
-                                     {
-                                         "color": Theme.secondaryHighlightColor
-                                     })
                 }
             }
 
@@ -341,6 +336,8 @@ WebContainer {
             onContextMenuRequested: {
                 if (data.types.indexOf("content-text") !== -1) {
                    // we want to select some content text
+
+                   MozContext.setPref("ui.textSelectBackground", Theme.secondaryHighlightColor + "")
                    webPage.sendAsyncMessage("Browser:SelectionStart", {"xPos": data.xPos, "yPos": data.yPos})
                 }
             }
