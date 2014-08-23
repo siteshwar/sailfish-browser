@@ -158,7 +158,7 @@ void DeclarativeWebUtils::updateWebEngineSettings()
     mozContext->setPref(QString("security.alternate_certificate_error_page"), QString("certerror"));
 
     // Use autodownload, never ask
-    mozContext->setPref(QString("browser.download.useDownloadDir"), QVariant(true));
+    mozContext->setPref(QString("browser.download.useDownloadDir"), QVariant(false));
     // see https://developer.mozilla.org/en-US/docs/Download_Manager_preferences
     // Use custom downloads location defined in browser.download.dir
     mozContext->setPref(QString("browser.download.folderList"), QVariant(2));

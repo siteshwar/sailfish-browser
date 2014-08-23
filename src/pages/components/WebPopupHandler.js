@@ -261,7 +261,12 @@ function openFilePicker(data) {
                                        "webView": webView,
                                        "filter": data.filter,
                                        "mode": data.mode});
-    } else {
+    }
+    else if (data.mode == 1) {
+        // Confirm download from user
+        pageStack.push(Qt.resolvedUrl("DownloadDialog.qml"), { webView: webView, name: data.name, winid: data.winid });
+    }
+    else {
         console.log("Gecko file picker requested unsupported mode" + data.mode)
     }
 }

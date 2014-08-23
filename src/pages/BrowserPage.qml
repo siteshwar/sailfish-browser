@@ -108,7 +108,6 @@ Page {
         id: historyModel
     }
 
-    Browser.DownloadRemorsePopup { id: downloadPopup }
     Browser.WebView {
         id: webView
 
