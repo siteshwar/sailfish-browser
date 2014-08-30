@@ -83,6 +83,22 @@ Page {
                 text: qsTrId("settings_browser-bt-privacy")
                 onClicked: pageStack.push(Qt.resolvedUrl("Privacy.qml"))
             }
+
+            TextField {
+                id: homePage
+
+                width: parent.width
+                //: Label for home page text field
+                //% "Home Page"
+                label: qsTrId("settings_browser-la-home_page")
+                text: homePageConfig.value
+                //: Placeholder text for home page text field
+                //% "Home Page"
+                placeholderText: qsTrId("settings_browser-ph-home_page")
+                inputMethodHints: Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase | Qt.ImhUrlCharactersOnly
+
+                onTextChanged: homePageConfig.value = homePage.text
+            }
         }
     }
 
@@ -97,6 +113,13 @@ Page {
                 searchEngine.currentIndex = name2index(value)
             }
         }
+    }
+
+    ConfigurationValue {
+        id: homePageConfig
+
+        key: "/apps/sailfish-browser/settings/home_page"
+        defaultValue: "http://jolla.com/"
     }
 
     BrowserSettings {
