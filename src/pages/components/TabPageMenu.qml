@@ -53,6 +53,11 @@ Loader {
             onClicked: pageStack.push(Qt.resolvedUrl("../TabPage.qml"), {"newTab": true, "browserPage": browserPage})
         }
 
+        MenuItem {
+            text: "about:config"
+            onClicked: pageStack.push(Qt.resolvedUrl("../Config.qml"), {})
+        }
+
         Component.onCompleted: opacity = 1.0
     }
 }
