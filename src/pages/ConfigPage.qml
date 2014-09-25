@@ -24,7 +24,6 @@ Page {
                 var allprefs = data;
                 prefsListModel.clear();
                 for (var i=0; i<allprefs.length; i++) {
-                    console.log(JSON.stringify(allprefs[i]));
                     prefsListModel.append(allprefs[i]);
                 }
             }

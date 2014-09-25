@@ -32,8 +32,8 @@ Page {
     property string _search
 
     function load(url, title) {
-        if (url === "about:blank") {
-            var dialog = pageStack.push(Qt.resolvedUrl("components/ConfirmDialog.qml"), {text: "Confirm"});
+        if (url === "about:config") {
+            var dialog = pageStack.push(Qt.resolvedUrl("components/ConfirmDialog.qml"), {text: qsTr("Changing these settings may void your warranty. Continue ?")});
             dialog.accepted.connect(function() {
                 pageStack.replace(Qt.resolvedUrl("ConfigPage.qml"), {});
             });
