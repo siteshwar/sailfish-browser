@@ -32,6 +32,14 @@ Page {
     property string _search
 
     function load(url, title) {
+        if (url === "about:blank") {
+            var dialog = pageStack.push(Qt.resolvedUrl("components/ConfirmDialog.qml"), {text: "Confirm"});
+            dialog.accepted.connect(function() {
+                pageStack.replace(Qt.resolvedUrl("ConfigPage.qml"), {});
+            });
+            return;
+        }
+
         if (page.newTab) {
             browserPage.tabs.newTab(url, title)
         } else {
