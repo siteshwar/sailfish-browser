@@ -7,7 +7,8 @@ SUBDIRS += tst_dbmanager \
     tst_declarativetabmodel \
     tst_desktopbookmarkwriter \
     tst_linkvalidator \
-    tst_webview
+    tst_webview \
+    tst_dbworker
 
 OTHER_FILES += \
     *.xml

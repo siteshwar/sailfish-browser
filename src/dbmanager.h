@@ -53,6 +53,8 @@ public:
     int getMaxTabId();
     int nextLinkId();
 
+    DBWorker* getWorker() { return worker; }
+
 public slots:
     void tabListAvailable(QList<Tab> tabs);
 
