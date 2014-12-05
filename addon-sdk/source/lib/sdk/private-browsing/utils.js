@@ -22,7 +22,7 @@ let pbService;
 let PrivateBrowsingUtils;
 
 // Private browsing is only supported in Fx
-if (isOneOf(['Firefox', 'Fennec'])) {
+//if (isOneOf(['Firefox', 'Fennec'])) {
   // get the nsIPrivateBrowsingService if it exists
   try {
     pbService = Cc["@mozilla.org/privatebrowsing;1"].
@@ -40,7 +40,7 @@ if (isOneOf(['Firefox', 'Fennec'])) {
     PrivateBrowsingUtils = Cu.import('resource://gre/modules/PrivateBrowsingUtils.jsm', {}).PrivateBrowsingUtils;
   }
   catch(e) { /* if this file DNE then an error will be thrown */ }
-}
+//}
 
 // checks that global private browsing is implemented
 let isGlobalPBSupported = exports.isGlobalPBSupported = !!pbService && is('Firefox');
