@@ -44,6 +44,7 @@ private slots:
     bool clearBookmarks();
     void setSearchEngine();
     void doNotTrack();
+    void setAutostartPrivateBrowsing();
 
 private:
     explicit SettingManager(QObject *parent = 0);
@@ -56,6 +57,7 @@ private:
     MGConfItem *m_clearBookmarksConfItem;
     MGConfItem *m_searchEngineConfItem;
     MGConfItem *m_doNotTrackConfItem;
+    MGConfItem *m_autostartPrivateBrowsing;
 
     MGConfItem *m_toolbarSmall;
     MGConfItem *m_toolbarLarge;

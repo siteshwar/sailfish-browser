@@ -31,6 +31,7 @@ SettingManager::SettingManager(QObject *parent)
     m_clearBookmarksConfItem = new MGConfItem("/apps/sailfish-browser/actions/clear_bookmarks", this);
     m_searchEngineConfItem = new MGConfItem("/apps/sailfish-browser/settings/search_engine", this);
     m_doNotTrackConfItem = new MGConfItem("/apps/sailfish-browser/settings/do_not_track", this);
+    m_autostartPrivateBrowsing = new MGConfItem("/apps/sailfish-browser/settings/autostart_private_browsing", this);
 
     // Look and feel related settings
     m_toolbarSmall = new MGConfItem("/apps/sailfish-browser/settings/toolbar_small", this);
@@ -61,6 +62,7 @@ bool SettingManager::initialize()
     }
     setSearchEngine();
     doNotTrack();
+    setAutostartPrivateBrowsing();
 
     connect(m_clearPrivateDataConfItem, SIGNAL(valueChanged()),
             this, SLOT(clearPrivateData()));
@@ -78,6 +80,8 @@ bool SettingManager::initialize()
             this, SLOT(setSearchEngine()));
     connect(m_doNotTrackConfItem, SIGNAL(valueChanged()),
             this, SLOT(doNotTrack()));
+    connect(m_autostartPrivateBrowsing, SIGNAL(valueChanged()),
+            this, SLOT(setAutostartPrivateBrowsing()));
 
     m_initialized = true;
     return clearedData;
@@ -175,4 +179,10 @@ void SettingManager::doNotTrack()
 {
     QMozContext::GetInstance()->setPref(QString("privacy.donottrackheader.enabled"),
                                         m_doNotTrackConfItem->value(false));
+}
+
+void SettingManager::setAutostartPrivateBrowsing()
+{
+    QMozContext::GetInstance()->setPref(QString("browser.privatebrowsing.autostart"),
+                                        m_autostartPrivateBrowsing->value(false));
 }
