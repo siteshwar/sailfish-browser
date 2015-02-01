@@ -14,7 +14,7 @@
 #include <qmozcontext.h>
 
 #include "declarativehistorymodel.h"
-#include "declarativetabmodel.h"
+#include "declarativepersistenttabmodel.h"
 #include "declarativewebcontainer.h"
 #include "declarativewebpage.h"
 #include "declarativewebviewcreator.h"
@@ -784,7 +784,7 @@ int main(int argc, char *argv[])
     testcase.setContextProperty("MozContext", QMozContext::GetInstance());
 
     qmlRegisterType<DeclarativeHistoryModel>("Sailfish.Browser", 1, 0, "HistoryModel");
-    qmlRegisterType<DeclarativeTabModel>("Sailfish.Browser", 1, 0, "TabModel");
+    qmlRegisterType<DeclarativePersistentTabModel>("Sailfish.Browser", 1, 0, "PersistentTabModel");
     qmlRegisterType<DeclarativeWebContainer>("Sailfish.Browser", 1, 0, "WebContainer");
     qmlRegisterType<DeclarativeWebPage>("Sailfish.Browser", 1, 0, "WebPage");
     qmlRegisterType<DeclarativeWebViewCreator>("Sailfish.Browser", 1, 0, "WebViewCreator");

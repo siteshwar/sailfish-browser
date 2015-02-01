@@ -9,8 +9,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "declarativetabmodel.h"
-#include "dbmanager.h"
+#include "declarativeprivatetabmodel.h"
 #include "linkvalidator.h"
 #include "declarativewebutils.h"
 
@@ -27,14 +26,15 @@ DeclarativePrivateTabModel::DeclarativePrivateTabModel(QObject *parent)
     : QAbstractListModel(parent)
     , m_loaded(false)
     , m_waitingForNewTab(false)
-    , m_nextTabId(DBManager::instance()->getMaxTabId() + 1)
+    , m_nextTabId(0)
+    , m_nextLinkId(0)
 {
-    connect(DBManager::instance(), SIGNAL(tabsAvailable(QList<Tab>)),
+    /*connect(DBManager::instance(), SIGNAL(tabsAvailable(QList<Tab>)),
             this, SLOT(tabsAvailable(QList<Tab>)));
     connect(DBManager::instance(), SIGNAL(tabChanged(Tab)),
             this, SLOT(tabChanged(Tab)));
     connect(DeclarativeWebUtils::instance(), SIGNAL(beforeShutdown()),
-            this, SLOT(saveActiveTab()));
+            this, SLOT(saveActiveTab()));*/
 }
 
 DeclarativePrivateTabModel::~DeclarativePrivateTabModel()
@@ -55,8 +55,8 @@ void DeclarativePrivateTabModel::addTab(const QString& url, const QString &title
     if (!LinkValidator::navigable(QUrl(url))) {
         return;
     }
-    int tabId = DBManager::instance()->createTab();
-    int linkId = DBManager::instance()->createLink(tabId, url, title);
+    int tabId = nextTabId();
+    int linkId = m_nextLinkId++;
 
     Tab tab(tabId, Link(linkId, url, "", title), 0, 0);
 #if DEBUG_LOGS
@@ -270,9 +270,9 @@ bool DeclarativePrivateTabModel::contains(int tabId) const
 
 void DeclarativePrivateTabModel::classBegin()
 {
-    DBManager::instance()->getAllTabs();
+    //DBManager::instance()->getAllTabs();
 }
-
+/*
 void DeclarativePrivateTabModel::tabsAvailable(QList<Tab> tabs)
 {
     beginResetModel();
@@ -314,7 +314,7 @@ void DeclarativePrivateTabModel::tabsAvailable(QList<Tab> tabs)
         emit loadedChanged();
     }
 }
-
+*/
 void DeclarativePrivateTabModel::tabChanged(const Tab &tab)
 {
 #if DEBUG_LOGS
@@ -377,10 +377,11 @@ void DeclarativePrivateTabModel::updateTitle(int tabId, bool activeTab, QString 
             m_activeTab.setTitle(title);
         }
     }
-
+/*
     if (updateDb) {
         DBManager::instance()->updateTitle(tabId, linkId, url, title);
     }
+*/
 }
 
 void DeclarativePrivateTabModel::removeTab(int tabId, const QString &thumbnail, int index)
@@ -388,7 +389,7 @@ void DeclarativePrivateTabModel::removeTab(int tabId, const QString &thumbnail, 
 #if DEBUG_LOGS
     qDebug() << "index:" << index << tabId;
 #endif
-    DBManager::instance()->removeTab(tabId);
+    //DBManager::instance()->removeTab(tabId);
     QFile f(thumbnail);
     if (f.exists()) {
         f.remove();
@@ -470,7 +471,7 @@ void DeclarativePrivateTabModel::updateTabUrl(int tabId, bool activeTab, const Q
             m_tabs[tabIndex].setNextLink(0);
             int currentLinkId = m_tabs.at(tabIndex).currentLink();
             m_tabs[tabIndex].setPreviousLink(currentLinkId);
-            m_tabs[tabIndex].setCurrentLink(DBManager::instance()->nextLinkId());
+            m_tabs[tabIndex].setCurrentLink(m_nextLinkId++);
         }
         m_tabs[tabIndex].setTitle("");
         m_tabs[tabIndex].setThumbnailPath("");
@@ -482,7 +483,7 @@ void DeclarativePrivateTabModel::updateTabUrl(int tabId, bool activeTab, const Q
         emit dataChanged(index(tabIndex, 0), index(tabIndex, 0), roles);
         updateDb = true;
     }
-
+/*
     if (updateDb) {
         if (!navigate) {
             DBManager::instance()->updateTab(tabId, url, "", "");
@@ -490,6 +491,7 @@ void DeclarativePrivateTabModel::updateTabUrl(int tabId, bool activeTab, const Q
             DBManager::instance()->navigateTo(tabId, url, "", "");
         }
     }
+*/
 }
 
 void DeclarativePrivateTabModel::updateThumbnailPath(int tabId, QString path)
@@ -508,12 +510,12 @@ void DeclarativePrivateTabModel::updateThumbnailPath(int tabId, QString path)
             QModelIndex start = index(i, 0);
             QModelIndex end = index(i, 0);
             emit dataChanged(start, end, roles);
-            DBManager::instance()->updateThumbPath(tabId, path);
+            //DBManager::instance()->updateThumbPath(tabId, path);
         }
     }
 }
 
 void DeclarativePrivateTabModel::saveActiveTab() const
 {
-    DBManager::instance()->saveSetting("activeTabId", QString("%1").arg(m_activeTab.tabId()));
+    //DBManager::instance()->saveSetting("activeTabId", QString("%1").arg(m_activeTab.tabId()));
 }

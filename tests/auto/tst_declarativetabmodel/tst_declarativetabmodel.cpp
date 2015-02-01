@@ -15,7 +15,7 @@
 #include <QQuickView>
 #include <QHash>
 
-#include "declarativetabmodel.h"
+#include "declarativepersistenttabmodel.h"
 #include "dbmanager.h"
 #include "testobject.h"
 
@@ -670,7 +670,7 @@ int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
     app.setAttribute(Qt::AA_Use96Dpi, true);
-    qmlRegisterType<DeclarativeTabModel>("Sailfish.Browser", 1, 0, "TabModel");
+    qmlRegisterType<DeclarativePersistentTabModel>("Sailfish.Browser", 1, 0, "PersistentTabModel");
     tst_declarativetabmodel testcase;
     return QTest::qExec(&testcase, argc, argv); \
 }

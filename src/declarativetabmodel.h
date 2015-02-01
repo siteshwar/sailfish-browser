@@ -24,6 +24,7 @@ class DeclarativeTabModel : public QAbstractListModel, public QQmlParserStatus
     Q_OBJECT
     Q_INTERFACES(QQmlParserStatus)
 
+protected:
     Q_PROPERTY(int activeTabIndex READ activeTabIndex NOTIFY activeTabIndexChanged FINAL)
     Q_PROPERTY(int count READ count NOTIFY countChanged FINAL)
     Q_PROPERTY(int nextTabId READ nextTabId NOTIFY nextTabIdChanged FINAL)
@@ -31,7 +32,7 @@ class DeclarativeTabModel : public QAbstractListModel, public QQmlParserStatus
     Q_PROPERTY(bool waitingForNewTab READ waitingForNewTab WRITE setWaitingForNewTab NOTIFY waitingForNewTabChanged FINAL)
 
 public:
-    DeclarativeTabModel(QObject *parent = 0);
+    DeclarativeTabModel(int nextTabId = 0, QObject *parent = 0);
     ~DeclarativeTabModel();
     
     enum TabRoles {
@@ -62,7 +63,6 @@ public:
     QHash<int, QByteArray> roleNames() const;
 
     // From QQmlParserStatus
-    void classBegin();
     void componentComplete();
 
     int nextTabId() const;
@@ -82,8 +82,6 @@ public:
     void updateTitle(int tabId, bool activeTab, QString url, QString title);
 
 public slots:
-    // TODO: Move to be private
-    void tabsAvailable(QList<Tab> tabs);
     void updateThumbnailPath(int tabId, QString path);
 
 signals:
@@ -100,15 +98,20 @@ signals:
     void waitingForNewTabChanged();
     void newTabRequested(QString url, QString title, int parentId = 0);
 
-private slots:
-    void tabChanged(const Tab &tab);
-    void saveActiveTab() const;
-
-private:
+protected:
     void removeTab(int tabId, const QString &thumbnail, int index);
     int findTabIndex(int tabId) const;
     void updateActiveTab(const Tab &activeTab, bool loadActiveTab);
     void updateTabUrl(int tabId, bool activeTab, const QString &url, bool navigate);
+
+    virtual int createTab() = 0;
+    virtual int createLink(int tabId, QString url, QString title) = 0;
+    virtual void updateTitle(int tabId, int linkId, QString url, QString title) = 0;
+    virtual void removeTab(int tabId) = 0;
+    virtual int nextLinkId() = 0;
+    virtual void updateTab(int tabId, QString url, QString title, QString path) = 0;
+    virtual void navigateTo(int tabId, QString url, QString title, QString path) = 0;
+    virtual void updateThumbPath(int tabId, QString path) = 0;
 
     // This should be replaced by m_activeTabIndex
     Tab m_activeTab;

@@ -83,7 +83,6 @@ public:
 
 public slots:
     // TODO: Move to be private
-    void tabsAvailable(QList<Tab> tabs);
     void updateThumbnailPath(int tabId, QString path);
 
 signals:
@@ -117,7 +116,7 @@ private:
     bool m_loaded;
     bool m_waitingForNewTab;
     int m_nextTabId;
-
+    int m_nextLinkId;
     friend class tst_declarativetabmodel;
     friend class tst_webview;
 };

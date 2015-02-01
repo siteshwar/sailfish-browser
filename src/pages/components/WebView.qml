@@ -57,7 +57,7 @@ WebContainer {
 
     webPageComponent: webPageComponent
 
-    tabModel: TabModel {
+    tabModel: PersistentTabModel {
         id: tabs
     }
 
