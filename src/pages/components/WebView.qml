@@ -57,9 +57,15 @@ WebContainer {
 
     webPageComponent: webPageComponent
 
-    tabModel: PrivateTabModel {
-        id: tabs
+    PersistentTabModel {
+        id: persistentTabModel
     }
+
+    PrivateTabModel {
+        id: privateTabModel
+    }
+
+    tabModel: persistentTabModel
 
     visible: WebUtils.firstUseDone
 
@@ -110,8 +116,8 @@ WebContainer {
             width: container.width
             state: ""
 
-            onClearGrabResult: tabs.updateThumbnailPath(tabId, "");
-            onGrabResult: tabs.updateThumbnailPath(tabId, fileName);
+            onClearGrabResult: tabModel.updateThumbnailPath(tabId, "");
+            onGrabResult: tabModel.updateThumbnailPath(tabId, fileName);
 
             onUrlChanged: {
                 if (url == "about:blank") return
