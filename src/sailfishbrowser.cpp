@@ -31,6 +31,7 @@
 #include "downloadmanager.h"
 #include "closeeventfilter.h"
 #include "declarativepersistenttabmodel.h"
+#include "declarativeprivatetabmodel.h"
 #include "declarativehistorymodel.h"
 #include "declarativewebcontainer.h"
 #include "declarativewebpage.h"
@@ -123,6 +124,7 @@ Q_DECL_EXPORT int main(int argc, char *argv[])
     qmlRegisterType<DeclarativeBookmarkModel>("Sailfish.Browser", 1, 0, "BookmarkModel");
     qmlRegisterUncreatableType<DeclarativeTabModel>("Sailfish.Browser", 1, 0, "TabModel", "TabModel is abstract!");
     qmlRegisterType<DeclarativePersistentTabModel>("Sailfish.Browser", 1, 0, "PersistentTabModel");
+    qmlRegisterType<DeclarativePrivateTabModel>("Sailfish.Browser", 1, 0, "PrivateTabModel");
     qmlRegisterType<DeclarativeHistoryModel>("Sailfish.Browser", 1, 0, "HistoryModel");
     qmlRegisterType<DeclarativeWebContainer>("Sailfish.Browser", 1, 0, "WebContainer");
     qmlRegisterType<DeclarativeWebPage>("Sailfish.Browser", 1, 0, "WebPage");

@@ -57,7 +57,7 @@ WebContainer {
 
     webPageComponent: webPageComponent
 
-    tabModel: PersistentTabModel {
+    tabModel: PrivateTabModel {
         id: tabs
     }
 
