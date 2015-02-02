@@ -29,6 +29,8 @@ public:
     int toolbarSmall();
     int toolbarLarge();
 
+    bool autostartPrivateBrowsing() const;
+
     static SettingManager *instance();
 
 signals:

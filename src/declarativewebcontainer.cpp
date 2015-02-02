@@ -61,6 +61,8 @@ DeclarativeWebContainer::DeclarativeWebContainer(QQuickItem *parent)
 {
     m_webPages.reset(new WebPages(this));
     setFlag(QQuickItem::ItemHasContents, true);
+    setPrivateMode(m_settingManager->autostartPrivateBrowsing());
+
     connect(DownloadManager::instance(), SIGNAL(initializedChanged()), this, SLOT(initialize()));
     connect(DownloadManager::instance(), SIGNAL(downloadStarted()), this, SLOT(onDownloadStarted()));
     connect(QMozContext::GetInstance(), SIGNAL(onInitialized()), this, SLOT(initialize()));
@@ -180,6 +182,19 @@ void DeclarativeWebContainer::setMaxLiveTabCount(int count)
     }
 }
 
+bool DeclarativeWebContainer::privateMode() const
+{
+    return m_privateMode;
+}
+
+void DeclarativeWebContainer::setPrivateMode(bool privateMode)
+{
+    if (m_privateMode != privateMode) {
+        m_privateMode = privateMode;
+        emit privateModeChanged();
+    }
+}
+
 bool DeclarativeWebContainer::background() const
 {
     return m_webPage ? m_webPage->background() : false;
@@ -187,7 +202,10 @@ bool DeclarativeWebContainer::background() const
 
 bool DeclarativeWebContainer::loading() const
 {
-    return m_webPage ? m_webPage->loading() : m_model->count();
+    if (m_webPage)
+        return m_webPage->loading();
+    else
+        return m_model ? m_model->count() : 0;
 }
 
 int DeclarativeWebContainer::loadProgress() const

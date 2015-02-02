@@ -65,7 +65,7 @@ WebContainer {
         id: privateTabModel
     }
 
-    tabModel: persistentTabModel
+    tabModel: privateMode ? privateTabModel : persistentTabModel
 
     visible: WebUtils.firstUseDone
 
@@ -115,6 +115,8 @@ WebContainer {
             focus: true
             width: container.width
             state: ""
+
+            privateMode: webView.privateMode
 
             onClearGrabResult: tabModel.updateThumbnailPath(tabId, "");
             onGrabResult: tabModel.updateThumbnailPath(tabId, fileName);

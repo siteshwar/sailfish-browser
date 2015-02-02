@@ -186,3 +186,8 @@ void SettingManager::setAutostartPrivateBrowsing()
     QMozContext::GetInstance()->setPref(QString("browser.privatebrowsing.autostart"),
                                         m_autostartPrivateBrowsing->value(false));
 }
+
+bool SettingManager::autostartPrivateBrowsing() const
+{
+    return m_autostartPrivateBrowsing->value(false).toBool();
+}
