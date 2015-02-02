@@ -14,8 +14,8 @@
 #include "declarativewebutils.h"
 
 DeclarativePrivateTabModel::DeclarativePrivateTabModel(QObject *parent)
-    : DeclarativeTabModel(0, parent),
-      m_nextLinkId(0)
+    : DeclarativeTabModel(1, parent),
+      m_nextLinkId(1)
 {
 }
 
