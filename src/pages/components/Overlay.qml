@@ -81,6 +81,10 @@ PanelBackground {
         }
     }
 
+    function setPrivateMode(privateMode) {
+        webView.privateMode = privateMode;
+    }
+
     y: webView.fullscreenHeight - toolBar.toolsHeight
 
     width: parent.width
@@ -422,8 +426,14 @@ PanelBackground {
             Browser.TabView {
                 model: webView.tabModel
                 portrait: tabPage.isPortrait
+                privateMode: webView.privateMode
 
                 onHide: pageStack.pop()
+
+                onPrivateModeChanged: {
+                    overlay.setPrivateMode(privateMode)
+                }
+
                 onEnterNewTabUrl: {
                     overlay.enterNewTabUrl(PageStackAction.Immediate)
                     pageStack.pop()

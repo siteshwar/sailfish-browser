@@ -17,6 +17,7 @@ SilicaGridView {
     id: tabView
 
     property bool portrait
+    property bool privateMode
 
     signal hide
     signal enterNewTabUrl
@@ -71,6 +72,18 @@ SilicaGridView {
         visible: Qt.application.active
         flickable: tabView
 
+        MenuItem {
+            visible: tabView.privateMode
+            //% "Exit Private Mode"
+            text: qsTrId("sailfish_browser-me-exit_private_mode")
+            onClicked: tabView.privateMode = false
+        }
+        MenuItem {
+            visible: !tabView.privateMode
+            //% "Private Mode"
+            text: qsTrId("sailfish_browser-me-private_mode")
+            onClicked: tabView.privateMode = true
+        }
         MenuItem {
             visible: webView.tabModel.count
             //% "Close all tabs"
