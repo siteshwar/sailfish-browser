@@ -30,7 +30,7 @@ protected:
     Q_PROPERTY(bool waitingForNewTab READ waitingForNewTab WRITE setWaitingForNewTab NOTIFY waitingForNewTabChanged FINAL)
 
 public:
-    DeclarativeTabModel(int nextTabId = 0, QObject *parent = 0);
+    DeclarativeTabModel(int nextTabId = 1, QObject *parent = 0);
     ~DeclarativeTabModel();
     
     enum TabRoles {
