@@ -20,7 +20,7 @@ PrivateTabModel::PrivateTabModel(QObject *parent)
     // Startup should be synced to this.
     if (!m_loaded) {
         m_loaded = true;
-        QMetaObject::invokeMethod(this, "loaded", Qt::QueuedConnection);
+        QMetaObject::invokeMethod(this, "loadedChanged", Qt::QueuedConnection);
     }
 }
 
