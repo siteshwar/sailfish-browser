@@ -206,7 +206,7 @@ bool DeclarativeWebContainer::loading() const
     if (m_webPage)
         return m_webPage->loading();
     else
-        return m_model ? m_model->count() : 0;
+        return m_model ? m_model->count() : false;
 }
 
 int DeclarativeWebContainer::loadProgress() const
