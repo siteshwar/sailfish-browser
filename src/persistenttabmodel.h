@@ -9,12 +9,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef DECLARATIVEPERSISTENTTABMODEL_H
-#define DECLARATIVEPERSISTENTTABMODEL_H
+#ifndef PERSISTENTTABMODEL_H
+#define PERSISTENTTABMODEL_H
 
 #include "declarativetabmodel.h"
 
-class DeclarativePersistentTabModel : public DeclarativeTabModel
+class PersistentTabModel : public DeclarativeTabModel
 {
     Q_OBJECT
 
@@ -37,8 +37,8 @@ public slots:
     void tabsAvailable(QList<Tab> tabs);
 
 public:
-    DeclarativePersistentTabModel(QObject *parent = 0);
-    ~DeclarativePersistentTabModel();
+    PersistentTabModel(QObject *parent = 0);
+    ~PersistentTabModel();
 };
 
-#endif // DECLARATIVEPERSISTENTTABMODEL_H
+#endif // PERSISTENTTABMODEL_H

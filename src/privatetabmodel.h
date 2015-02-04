@@ -9,12 +9,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef DECLARATIVEPRIVATETABMODEL_H
-#define DECLARATIVEPRIVATETABMODEL_H
+#ifndef PRIVATETABMODEL_H
+#define PRIVATETABMODEL_H
 
 #include "declarativetabmodel.h"
 
-class DeclarativePrivateTabModel : public DeclarativeTabModel
+class PrivateTabModel : public DeclarativeTabModel
 {
     Q_OBJECT
 
@@ -29,11 +29,11 @@ protected:
     virtual void updateThumbPath(int tabId, QString path);
 
 public:
-    DeclarativePrivateTabModel(QObject *parent = 0);
-    ~DeclarativePrivateTabModel();
+    PrivateTabModel(QObject *parent = 0);
+    ~PrivateTabModel();
 
 private:
     int m_nextLinkId;
 };
 
-#endif // DECLARATIVEPRIVATETABMODEL_H
+#endif // PRIVATETABMODEL_H

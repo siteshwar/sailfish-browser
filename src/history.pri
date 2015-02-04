@@ -1,8 +1,8 @@
 # C++ sources
 SOURCES += \
     $$PWD/declarativetabmodel.cpp \
-    $$PWD/declarativepersistenttabmodel.cpp \
-    $$PWD/declarativeprivatetabmodel.cpp \
+    $$PWD/persistenttabmodel.cpp \
+    $$PWD/privatetabmodel.cpp \
     $$PWD/dbmanager.cpp \
     $$PWD/dbworker.cpp \
     $$PWD/link.cpp \
@@ -13,8 +13,8 @@ SOURCES += \
 # C++ headers
 HEADERS += \
     $$PWD/declarativetabmodel.h \
-    $$PWD/declarativepersistenttabmodel.h \
-    $$PWD/declarativeprivatetabmodel.h \
+    $$PWD/persistenttabmodel.h \
+    $$PWD/privatetabmodel.h \
     $$PWD/dbmanager.h \
     $$PWD/dbworker.h \
     $$PWD/link.h \

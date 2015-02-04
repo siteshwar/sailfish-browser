@@ -10,10 +10,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "declarativeprivatetabmodel.h"
+#include "privatetabmodel.h"
 #include "declarativewebutils.h"
 
-DeclarativePrivateTabModel::DeclarativePrivateTabModel(QObject *parent)
+PrivateTabModel::PrivateTabModel(QObject *parent)
     : DeclarativeTabModel(1, parent),
       m_nextLinkId(1)
 {
@@ -24,35 +24,35 @@ DeclarativePrivateTabModel::DeclarativePrivateTabModel(QObject *parent)
     }
 }
 
-DeclarativePrivateTabModel::~DeclarativePrivateTabModel()
+PrivateTabModel::~PrivateTabModel()
 {
 }
 
-int DeclarativePrivateTabModel::createTab() {
+int PrivateTabModel::createTab() {
     return nextTabId();
 }
 
-int DeclarativePrivateTabModel::createLink(int tabId, QString url, QString title) {
+int PrivateTabModel::createLink(int tabId, QString url, QString title) {
     return m_nextLinkId++;
 }
 
-void DeclarativePrivateTabModel::updateTitle(int tabId, int linkId, QString url, QString title)
+void PrivateTabModel::updateTitle(int tabId, int linkId, QString url, QString title)
 {
 }
 
-void DeclarativePrivateTabModel::removeTab(int tabId)
+void PrivateTabModel::removeTab(int tabId)
 {
 }
 
-int DeclarativePrivateTabModel::nextLinkId() {
+int PrivateTabModel::nextLinkId() {
 }
 
-void DeclarativePrivateTabModel::updateTab(int tabId, QString url, QString title, QString path) {
+void PrivateTabModel::updateTab(int tabId, QString url, QString title, QString path) {
 }
 
-void DeclarativePrivateTabModel::navigateTo(int tabId, QString url, QString title, QString path) {
+void PrivateTabModel::navigateTo(int tabId, QString url, QString title, QString path) {
 }
 
-void DeclarativePrivateTabModel::updateThumbPath(int tabId, QString path)
+void PrivateTabModel::updateThumbPath(int tabId, QString path)
 {
 }
