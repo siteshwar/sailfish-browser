@@ -33,26 +33,46 @@ int PrivateTabModel::createTab() {
 }
 
 int PrivateTabModel::createLink(int tabId, QString url, QString title) {
+    Q_UNUSED(tabId)
+    Q_UNUSED(url)
+    Q_UNUSED(title)
+
     return m_nextLinkId++;
 }
 
 void PrivateTabModel::updateTitle(int tabId, int linkId, QString url, QString title)
 {
+    Q_UNUSED(tabId)
+    Q_UNUSED(linkId)
+    Q_UNUSED(url)
+    Q_UNUSED(title)
 }
 
 void PrivateTabModel::removeTab(int tabId)
 {
+    Q_UNUSED(tabId)
 }
 
 int PrivateTabModel::nextLinkId() {
+    return m_nextLinkId;
 }
 
 void PrivateTabModel::updateTab(int tabId, QString url, QString title, QString path) {
+    Q_UNUSED(tabId)
+    Q_UNUSED(url)
+    Q_UNUSED(title)
+    Q_UNUSED(path)
 }
 
 void PrivateTabModel::navigateTo(int tabId, QString url, QString title, QString path) {
+    Q_UNUSED(tabId)
+    Q_UNUSED(url)
+    Q_UNUSED(title)
+    Q_UNUSED(path)
 }
 
 void PrivateTabModel::updateThumbPath(int tabId, QString path)
 {
+    Q_UNUSED(tabId)
+    Q_UNUSED(path)
 }
