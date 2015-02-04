@@ -40,7 +40,7 @@ WebContainer {
 
     function grabActivePage() {
         if (webView.contentItem) {
-            webView.contentItem.grabToFile()
+            webView.privateMode ? webView.contentItem.grabThumbnail() : webView.contentItem.grabToFile()
         }
     }
 
@@ -64,6 +64,9 @@ WebContainer {
     PrivateTabModel {
         id: privateTabModel
     }
+
+    // Clear private tab model when mode changes
+    onPrivateModeChanged: if (!privateMode) privateTabModel.clear()
 
     tabModel: privateMode ? privateTabModel : persistentTabModel
 
@@ -181,7 +184,7 @@ WebContainer {
                 }
 
                 if (loaded) {
-                    grabToFile()
+                    webView.privateMode ? grabThumbnail() : grabToFile()
                 }
             }
 

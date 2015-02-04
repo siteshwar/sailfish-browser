@@ -419,7 +419,7 @@ PanelBackground {
 
             onStatusChanged: {
                 if (activeWebPage && status == PageStatus.Active) {
-                    activeWebPage.grabToFile()
+                    webView.privateMode ? activeWebPage.grabThumbnail() : activeWebPage.grabToFile()
                 }
             }
 
