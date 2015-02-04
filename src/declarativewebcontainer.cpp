@@ -191,6 +191,7 @@ void DeclarativeWebContainer::setPrivateMode(bool privateMode)
 {
     if (m_privateMode != privateMode) {
         m_privateMode = privateMode;
+        m_settingManager->setPrivateMode(privateMode);
         emit privateModeChanged();
     }
 }

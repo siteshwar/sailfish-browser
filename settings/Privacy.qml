@@ -54,21 +54,6 @@ Page {
                 onCheckedChanged: doNotTrackConfig.value = checked
             }
 
-            TextSwitch {
-                id: autostartPrivateBrowsing
-
-                checked: autostartPrivateBrowsingConfig.value
-
-                //: Autostart private browsing.
-                //% "Autostart private browsing"
-                text: qsTrId("settings_browser-la-private_browsing")
-                //: Automatically start private browsing.
-                //% "Automatically enable private browsing when browser starts"
-                description: qsTrId("settings_browser-la-private_browsing_description")
-
-                onCheckedChanged: autostartPrivateBrowsingConfig.value = checked
-            }
-
             SectionHeader {
                 //: Clear private data section header
                 //% "Clear private data"
@@ -162,13 +147,6 @@ Page {
         id: doNotTrackConfig
 
         key: "/apps/sailfish-browser/settings/do_not_track"
-        defaultValue: false
-    }
-
-    ConfigurationValue {
-        id: autostartPrivateBrowsingConfig
-
-        key: "/apps/sailfish-browser/settings/autostart_private_browsing"
         defaultValue: false
     }
 

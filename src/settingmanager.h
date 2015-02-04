@@ -30,6 +30,7 @@ public:
     int toolbarLarge();
 
     bool autostartPrivateBrowsing() const;
+    void setPrivateMode(bool);
 
     static SettingManager *instance();
 

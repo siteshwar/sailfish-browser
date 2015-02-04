@@ -181,6 +181,11 @@ void SettingManager::doNotTrack()
                                         m_doNotTrackConfItem->value(false));
 }
 
+void SettingManager::setPrivateMode(bool privateMode)
+{
+    m_autostartPrivateBrowsing->set(privateMode);
+}
+
 void SettingManager::setAutostartPrivateBrowsing()
 {
     QMozContext::GetInstance()->setPref(QString("browser.privatebrowsing.autostart"),
