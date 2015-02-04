@@ -217,10 +217,6 @@ QVariant DeclarativeTabModel::data(const QModelIndex & index, int role) const {
     return QVariant();
 }
 
-void DeclarativeTabModel::componentComplete()
-{
-}
-
 bool DeclarativeTabModel::loaded() const
 {
     return m_loaded;

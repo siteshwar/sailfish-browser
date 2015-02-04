@@ -12,11 +12,6 @@
 #ifndef DECLARATIVEPERSISTENTTABMODEL_H
 #define DECLARATIVEPERSISTENTTABMODEL_H
 
-#include <QAbstractListModel>
-#include <QQmlParserStatus>
-#include <QPointer>
-#include <QScopedPointer>
-
 #include "declarativetabmodel.h"
 
 class DeclarativePersistentTabModel : public DeclarativeTabModel
@@ -42,8 +37,6 @@ public slots:
     void tabsAvailable(QList<Tab> tabs);
 
 public:
-    void classBegin();
-
     DeclarativePersistentTabModel(QObject *parent = 0);
     ~DeclarativePersistentTabModel();
 };

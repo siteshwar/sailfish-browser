@@ -13,16 +13,14 @@
 #define DECLARATIVETABMODEL_H
 
 #include <QAbstractListModel>
-#include <QQmlParserStatus>
 #include <QPointer>
 #include <QScopedPointer>
 
 #include "tab.h"
 
-class DeclarativeTabModel : public QAbstractListModel, public QQmlParserStatus
+class DeclarativeTabModel : public QAbstractListModel
 {
     Q_OBJECT
-    Q_INTERFACES(QQmlParserStatus)
 
 protected:
     Q_PROPERTY(int activeTabIndex READ activeTabIndex NOTIFY activeTabIndexChanged FINAL)
@@ -61,9 +59,6 @@ public:
     int rowCount(const QModelIndex & parent = QModelIndex()) const;
     QVariant data(const QModelIndex & index, int role = Qt::DisplayRole) const;
     QHash<int, QByteArray> roleNames() const;
-
-    // From QQmlParserStatus
-    void componentComplete();
 
     int nextTabId() const;
 

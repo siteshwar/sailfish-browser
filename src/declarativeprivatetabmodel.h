@@ -12,11 +12,6 @@
 #ifndef DECLARATIVEPRIVATETABMODEL_H
 #define DECLARATIVEPRIVATETABMODEL_H
 
-#include <QAbstractListModel>
-#include <QQmlParserStatus>
-#include <QPointer>
-#include <QScopedPointer>
-
 #include "declarativetabmodel.h"
 
 class DeclarativePrivateTabModel : public DeclarativeTabModel
@@ -34,8 +29,6 @@ protected:
     virtual void updateThumbPath(int tabId, QString path);
 
 public:
-    void classBegin();
-
     DeclarativePrivateTabModel(QObject *parent = 0);
     ~DeclarativePrivateTabModel();
 

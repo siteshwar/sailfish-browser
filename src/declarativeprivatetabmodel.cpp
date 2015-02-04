@@ -17,19 +17,15 @@ DeclarativePrivateTabModel::DeclarativePrivateTabModel(QObject *parent)
     : DeclarativeTabModel(1, parent),
       m_nextLinkId(1)
 {
+    // Startup should be synced to this.
+    if (!m_loaded) {
+        m_loaded = true;
+        QMetaObject::invokeMethod(this, "loaded", Qt::QueuedConnection);
+    }
 }
 
 DeclarativePrivateTabModel::~DeclarativePrivateTabModel()
 {
-}
-
-void DeclarativePrivateTabModel::classBegin()
-{
-    // Startup should be synced to this.
-    if (!m_loaded) {
-        m_loaded = true;
-        emit loadedChanged();
-    }
 }
 
 int DeclarativePrivateTabModel::createTab() {

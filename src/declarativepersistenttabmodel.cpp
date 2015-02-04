@@ -23,15 +23,12 @@ DeclarativePersistentTabModel::DeclarativePersistentTabModel(QObject *parent)
             this, SLOT(tabChanged(Tab)));
     connect(DeclarativeWebUtils::instance(), SIGNAL(beforeShutdown()),
             this, SLOT(saveActiveTab()));
+
+    DBManager::instance()->getAllTabs();
 }
 
 DeclarativePersistentTabModel::~DeclarativePersistentTabModel()
 {
-}
-
-void DeclarativePersistentTabModel::classBegin()
-{
-    DBManager::instance()->getAllTabs();
 }
 
 void DeclarativePersistentTabModel::tabsAvailable(QList<Tab> tabs)
