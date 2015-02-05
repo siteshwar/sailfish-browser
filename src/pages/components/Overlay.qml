@@ -82,7 +82,8 @@ PanelBackground {
     }
 
     function setPrivateMode(privateMode) {
-        webView.privateMode = privateMode;
+        console.log("Setting private mode to " + privateMode);
+        webView.changePrivateMode(privateMode);
     }
 
     y: webView.fullscreenHeight - toolBar.toolsHeight
@@ -431,6 +432,7 @@ PanelBackground {
                 onHide: pageStack.pop()
 
                 onPrivateModeChanged: {
+                    console.log("Setting private mode to " + privateMode);
                     overlay.setPrivateMode(privateMode)
                 }
 

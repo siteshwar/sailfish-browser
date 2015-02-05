@@ -113,6 +113,7 @@ public:
     Q_INVOKABLE void goForward();
     Q_INVOKABLE void goBack();
     Q_INVOKABLE bool alive(int tabId);
+    Q_INVOKABLE void changePrivateMode(bool);
 
     Q_INVOKABLE void dumpPages() const;
 
@@ -171,6 +172,7 @@ private slots:
     void updateLoadProgress();
     void updateLoading();
     void setActiveTabData();
+    void setWebPages(bool);
 
     void updateWindowFlags();
 
@@ -193,7 +195,11 @@ private:
     QPointer<DeclarativeTabModel> m_model;
     QPointer<QQmlComponent> m_webPageComponent;
     QPointer<SettingManager> m_settingManager;
-    QScopedPointer<WebPages> m_webPages;
+
+    QScopedPointer<WebPages> m_normalWebPages;
+    QScopedPointer<WebPages> m_privateWebPages;
+    WebPages *m_webPages;
+
     bool m_foreground;
     bool m_allowHiding;
     bool m_popupActive;

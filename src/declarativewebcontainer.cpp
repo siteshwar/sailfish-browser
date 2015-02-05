@@ -59,9 +59,15 @@ DeclarativeWebContainer::DeclarativeWebContainer(QQuickItem *parent)
     , m_completed(false)
     , m_initialized(false)
 {
-    m_webPages.reset(new WebPages(this));
     setFlag(QQuickItem::ItemHasContents, true);
     setPrivateMode(m_settingManager->autostartPrivateBrowsing());
+
+    m_normalWebPages.reset(new WebPages(this));
+    m_privateWebPages.reset(new WebPages(this));
+
+    setWebPages(privateMode());
+
+    //connect(this, SIGNAL(privateModeChanged()), this, SLOT(setWebPages()));
 
     connect(DownloadManager::instance(), SIGNAL(initializedChanged()), this, SLOT(initialize()));
     connect(DownloadManager::instance(), SIGNAL(downloadStarted()), this, SLOT(onDownloadStarted()));
@@ -79,6 +85,7 @@ DeclarativeWebContainer::DeclarativeWebContainer(QQuickItem *parent)
     connect(this, SIGNAL(heightChanged()), this, SLOT(sendVkbOpenCompositionMetrics()));
     connect(this, SIGNAL(widthChanged()), this, SLOT(sendVkbOpenCompositionMetrics()));
     connect(this, SIGNAL(foregroundChanged()), this, SLOT(updateWindowFlags()));
+
 
     qApp->installEventFilter(this);
 }
@@ -405,6 +412,15 @@ bool DeclarativeWebContainer::activatePage(int tabId, bool force, int parentId)
 bool DeclarativeWebContainer::alive(int tabId)
 {
     return m_webPages->alive(tabId);
+}
+
+void DeclarativeWebContainer::changePrivateMode(bool privateMode)
+{
+    if (m_privateMode != privateMode) {
+        setWebPages(privateMode);
+        setPrivateMode(privateMode);
+        m_webPages->clear();
+    }
 }
 
 void DeclarativeWebContainer::dumpPages() const
@@ -756,6 +772,14 @@ void DeclarativeWebContainer::setActiveTabData()
         m_tabId = tab.tabId();
         emit tabIdChanged();
     }
+}
+
+void DeclarativeWebContainer::setWebPages(bool privateMode) {
+    qDebug() << "Changing web pages" << privateMode;
+    if (privateMode)
+        m_webPages = m_privateWebPages.data();
+    else
+        m_webPages = m_normalWebPages.data();
 }
 
 void DeclarativeWebContainer::updateWindowFlags()

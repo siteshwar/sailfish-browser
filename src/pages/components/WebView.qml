@@ -119,7 +119,7 @@ WebContainer {
             width: container.width
             state: ""
 
-            privateMode: webView.privateMode
+            //privateMode: webView.privateMode
 
             onClearGrabResult: tabModel.updateThumbnailPath(tabId, "");
             onGrabResult: tabModel.updateThumbnailPath(tabId, fileName);
