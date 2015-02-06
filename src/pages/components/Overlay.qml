@@ -434,6 +434,8 @@ PanelBackground {
                 onPrivateModeChanged: {
                     console.log("Setting private mode to " + privateMode);
                     overlay.setPrivateMode(privateMode)
+                    tabPage.activeTabIndex = -1;
+                    tabPage.activeWebPage = null;
                 }
 
                 onEnterNewTabUrl: {
@@ -451,7 +453,7 @@ PanelBackground {
                     pageStack.pop()
                 }
                 onCloseTab: {
-                    webView.tabModel.remove(index)
+                    webView.tabModel.remove(index);
                     if (webView.tabModel.count === 0) {
                         enterNewTabUrl()
                     }

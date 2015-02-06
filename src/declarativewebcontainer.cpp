@@ -406,6 +406,7 @@ bool DeclarativeWebContainer::activatePage(int tabId, bool force, int parentId)
         connect(m_webPage, SIGNAL(backgroundChanged()), this, SIGNAL(backgroundChanged()), Qt::UniqueConnection);
         return activationData.activated;
     }
+
     return false;
 }
 
@@ -419,7 +420,8 @@ void DeclarativeWebContainer::changePrivateMode(bool privateMode)
     if (m_privateMode != privateMode) {
         setWebPages(privateMode);
         setPrivateMode(privateMode);
-        m_webPages->clear();
+        setActiveTabData();
+        reload(false);
     }
 }
 
