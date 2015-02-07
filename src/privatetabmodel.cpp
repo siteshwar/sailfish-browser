@@ -1,8 +1,7 @@
 /****************************************************************************
 **
-** Copyright (C) 2013 Jolla Ltd.
-** Contact: Petri M. Gerdt <petri.gerdt@jolla.com>
-** Contact: Raine Makelainen <raine.makelainen@jolla.com>
+** Copyright (C) 2015 Jolla Ltd.
+** Contact: Siteshwar Vashisht <siteshwar@gmail.com>
 **
 ****************************************************************************/
 

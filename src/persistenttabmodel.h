@@ -2,6 +2,7 @@
 **
 ** Copyright (C) 2013 Jolla Ltd.
 ** Contact: Petri M. Gerdt <petri.gerdt@jollamobile.com>
+** Contact: Siteshwar Vashisht <siteshwar@gmail.com>
 **
 ****************************************************************************/
 
