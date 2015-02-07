@@ -216,6 +216,10 @@ PanelBackground {
             height: toolBar.toolsHeight + historyList.height
             clip: true
 
+            PrivateModeTexture {
+                visible: toolBar.visible && webView.privateMode
+            }
+
             Browser.ToolBar {
                 id: toolBar
 

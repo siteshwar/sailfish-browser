@@ -37,6 +37,10 @@ SilicaGridView {
     displaced: Browser.DisplaceTransition {}
     remove: Browser.RemoveTransition {}
 
+    PrivateModeTexture {
+        visible: privateMode
+    }
+
     delegate: TabItem {
         id: tabItem
 
