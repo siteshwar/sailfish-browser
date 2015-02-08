@@ -89,7 +89,7 @@ PanelBackground {
     y: webView.fullscreenHeight - toolBar.toolsHeight
 
     width: parent.width
-    height: historyContainer.height
+    height: historyContainer.height + privateModeLabel.height
     // `visible` is controlled by Browser.OverlayAnimator
     enabled: visible
 
@@ -162,6 +162,29 @@ PanelBackground {
         anchors.fill: parent
         source: "image://theme/graphic-gradient-edge"
     }
+
+    Label {
+        id: privateModeLabel
+
+        PrivateModeTexture {
+            anchors.fill: parent
+        }
+
+        //: Label for private browsing above address bar
+        //% "Private browsing"
+        text: qsTrId("sailfish_browser-la-private_mode")
+        visible: searchField.visible && webView.privateMode
+        height: toolBar.height
+        width: parent.width
+
+        anchors.bottom: dragArea.top
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+
+        color: Theme.primaryColor
+        font.pixelSize: Theme.fontSizeLarge
+    }
+
 
     Browser.ProgressBar {
         id: progressBar
