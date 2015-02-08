@@ -83,7 +83,7 @@ PanelBackground {
 
     function setPrivateMode(privateMode) {
         console.log("Setting private mode to " + privateMode);
-        webView.changePrivateMode(privateMode);
+        webView.privateMode = privateMode;
     }
 
     y: webView.fullscreenHeight - toolBar.toolsHeight

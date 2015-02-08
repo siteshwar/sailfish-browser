@@ -65,7 +65,7 @@ DeclarativeWebContainer::DeclarativeWebContainer(QQuickItem *parent)
     m_normalWebPages.reset(new WebPages(this));
     m_privateWebPages.reset(new WebPages(this));
 
-    setWebPages(privateMode());
+    setWebPages();
 
     //connect(this, SIGNAL(privateModeChanged()), this, SLOT(setWebPages()));
 
@@ -75,6 +75,7 @@ DeclarativeWebContainer::DeclarativeWebContainer(QQuickItem *parent)
     connect(this, SIGNAL(portraitChanged()), this, SLOT(resetHeight()));
     connect(this, SIGNAL(enabledChanged()), this, SLOT(handleEnabledChanged()));
 
+    connect(this, SIGNAL(privateModeChanged()), this, SLOT(updateMode()));
     QString cacheLocation = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
     QDir dir(cacheLocation);
     if(!dir.exists() && !dir.mkpath(cacheLocation)) {
@@ -415,14 +416,11 @@ bool DeclarativeWebContainer::alive(int tabId)
     return m_webPages->alive(tabId);
 }
 
-void DeclarativeWebContainer::changePrivateMode(bool privateMode)
+void DeclarativeWebContainer::updateMode()
 {
-    if (m_privateMode != privateMode) {
-        setWebPages(privateMode);
-        setPrivateMode(privateMode);
-        setActiveTabData();
-        reload(false);
-    }
+    setWebPages();
+    setActiveTabData();
+    reload(false);
 }
 
 void DeclarativeWebContainer::dumpPages() const
@@ -776,9 +774,8 @@ void DeclarativeWebContainer::setActiveTabData()
     }
 }
 
-void DeclarativeWebContainer::setWebPages(bool privateMode) {
-    qDebug() << "Changing web pages" << privateMode;
-    if (privateMode)
+void DeclarativeWebContainer::setWebPages() {
+    if (m_privateMode)
         m_webPages = m_privateWebPages.data();
     else
         m_webPages = m_normalWebPages.data();
