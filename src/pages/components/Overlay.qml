@@ -438,8 +438,8 @@ PanelBackground {
                 onPrivateModeChanged: {
                     console.log("Setting private mode to " + privateMode);
                     overlay.setPrivateMode(privateMode)
-                    tabPage.activeTabIndex = -1;
-                    tabPage.activeWebPage = null;
+                    tabPage.activeTabIndex =  webView.tabModel.activeTabIndex;
+                    tabPage.activeWebPage = webView.contentItem;
                 }
 
                 onEnterNewTabUrl: {
