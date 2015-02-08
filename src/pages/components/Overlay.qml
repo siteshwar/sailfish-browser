@@ -81,11 +81,6 @@ PanelBackground {
         }
     }
 
-    function setPrivateMode(privateMode) {
-        console.log("Setting private mode to " + privateMode);
-        webView.privateMode = privateMode;
-    }
-
     y: webView.fullscreenHeight - toolBar.toolsHeight
 
     width: parent.width
@@ -459,8 +454,7 @@ PanelBackground {
                 onHide: pageStack.pop()
 
                 onPrivateModeChanged: {
-                    console.log("Setting private mode to " + privateMode);
-                    overlay.setPrivateMode(privateMode)
+                    webView.privateMode = privateMode;
                     tabPage.activeTabIndex =  webView.tabModel.activeTabIndex;
                     tabPage.activeWebPage = webView.contentItem;
                 }
