@@ -57,7 +57,7 @@ WebContainer {
 
     webPageComponent: webPageComponent
 
-    PersistentTabModel {
+    /*PersistentTabModel {
         id: persistentTabModel
     }
 
@@ -68,7 +68,7 @@ WebContainer {
     // Clear private tab model when mode changes
     onPrivateModeChanged: if (!privateMode) privateTabModel.clear()
 
-    tabModel: privateMode ? privateTabModel : persistentTabModel
+    tabModel: privateMode ? privateTabModel : persistentTabModel*/
 
     visible: WebUtils.firstUseDone
 
