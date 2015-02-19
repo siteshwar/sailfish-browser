@@ -24,7 +24,7 @@ BuildRequires:  gdb
 BuildRequires:  oneshot
 
 Requires: sailfishsilica-qt5 >= 0.11.8
-Requires: jolla-ambient >= 0.4.18
+Requires: jolla-ambient
 Requires: xulrunner-qt5 >= 29.0.1.9
 Requires: embedlite-components-qt5 >= 1.6.4
 Requires: sailfish-browser-settings = %{version}
