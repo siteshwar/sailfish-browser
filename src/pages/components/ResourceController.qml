@@ -13,6 +13,7 @@
 import QtQuick 2.0
 import Sailfish.Media 1.0
 import org.freedesktop.contextkit 1.0
+import org.nemomobile.policy 1.0
 
 // QtObject cannot have children
 Item {
@@ -71,9 +72,9 @@ Item {
 
     // This is behind 1000ms timer
     onBackgroundChanged: {
-        if (!audioActive && !videoActive && background) {
+        if (!audioActive && background) {
             suspendView()
-        } else {
+        } else if (!background) {
             resumeView()
         }
     }
@@ -124,7 +125,7 @@ Item {
         // 1000ms was not enough to always allow buffering start of next song via 3G
         interval: 5000
         onTriggered: {
-            if (!videoActive && !audioActive && suspendIntention) {
+            if (!audioActive && suspendIntention) {
                 suspendView()
             } else {
                 resumeView()
@@ -135,6 +136,20 @@ Item {
             if (suspendIntention) {
                 start()
             }
+        }
+    }
+
+    Permissions {
+        enabled: audioActive || videoActive
+        applicationClass: "player"
+        autoRelease: true
+
+        Resource {
+            type: Resource.AudioPlayback
+        }
+
+        Resource {
+            type: Resource.VideoPlayback
         }
     }
 }

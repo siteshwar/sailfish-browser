@@ -12,22 +12,18 @@
 import QtQuick 2.1
 import Sailfish.Silica 1.0
 
-IconButton {
-    id: closeTabButton
-
-    property bool closeActiveTab
-    readonly property real padding: Theme.paddingLarge - (closeTabButton.width - Theme.iconSizeMedium) / 2
-
-    anchors {
-        bottom: parent.bottom; bottomMargin: padding
-        right: parent.right; rightMargin: padding
-    }
-    icon.source: "image://theme/icon-m-close"
-    onClicked: {
-        if (closeActiveTab) {
-            browserPage.tabs.closeActiveTab()
-        } else {
-            browserPage.tabs.remove(index)
+CoverBackground {
+    CoverActionList {
+        CoverAction {
+            iconSource: "image://theme/icon-cover-new"
+            onTriggered: window.newTab()
         }
+    }
+
+    CoverPlaceholder {
+        //: Create a new tab cover text
+        //% "Create a new tab"
+        text: qsTrId("sailfish_browser-he-create_new_tab")
+        icon.source: "image://theme/icon-launcher-browser"
     }
 }

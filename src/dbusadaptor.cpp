@@ -17,14 +17,27 @@ DBusAdaptor::DBusAdaptor(BrowserService *browserService):
 {
 }
 
-void DBusAdaptor::openUrl(QStringList args) {
+void DBusAdaptor::openUrl(QStringList args)
+{
     m_BrowserService->openUrl(args);
 }
 
-void DBusAdaptor::cancelTransfer(int transferId) {
+void DBusAdaptor::activateNewTabView()
+{
+    m_BrowserService->activateNewTabView();
+}
+
+void DBusAdaptor::cancelTransfer(int transferId)
+{
     m_BrowserService->cancelTransfer(transferId);
 }
 
-void DBusAdaptor::restartTransfer(int transferId) {
+void DBusAdaptor::restartTransfer(int transferId)
+{
     m_BrowserService->restartTransfer(transferId);
+}
+
+void DBusAdaptor::dumpMemoryInfo(QString fileName)
+{
+    m_BrowserService->dumpMemoryInfo(fileName);
 }

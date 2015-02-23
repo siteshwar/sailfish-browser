@@ -13,69 +13,21 @@ import QtQuick 2.1
 import Sailfish.Silica 1.0
 import Sailfish.Browser 1.0
 import Qt5Mozilla 1.0
-import org.nemomobile.connectivity 1.0
 import "WebPopupHandler.js" as PopupHandler
 import "." as Browser
 
 WebContainer {
     id: webView
 
-    property bool firstUseFullscreen
+    property color _decoratorColor: Theme.highlightDimmerColor
+    readonly property bool moving: contentItem ? contentItem.moving : false
+
+    property bool findInPageHasResult
 
     function stop() {
         if (contentItem) {
             contentItem.stop()
         }
-    }
-
-    // force property only used by WebView itself for deferred loading when
-    // network connectivity is established or when loading initial web page.
-    function load(url, title, force) {
-//        if (url.substring(0, 6) !== "about:" && url.substring(0, 5) !== "file:"
-//            && !connectionHelper.haveNetworkConnectivity()
-//            && !deferredLoad) {
-
-//            deferredReload = false
-//            deferredLoad = {
-//                "url": url,
-//                "title": title
-//            }
-//            connectionHelper.attemptToConnectNetwork()
-//            return
-//        }
-
-        // Modify url and title to string
-        title = title ? "" + title : ""
-        url = url ? "" + url : ""
-
-        // This guarantees at that least one webview exists.
-        if (tabModel.count == 0 && !tabModel.hasNewTabData) {
-            tabModel.newTabData(url, title, null)
-        }
-
-        if (!tabModel.hasNewTabData || force || !webView.activatePage(tabModel.nextTabId)) {
-            // First contentItem will be created once tab activated.
-            if (contentItem) contentItem.loadTab(url, force)
-        }
-    }
-
-    function reload() {
-        if (!contentItem) {
-            return
-        }
-
-        var url = contentItem.url.toString()
-//        if (url.substring(0, 6) !== "about:" && url.substring(0, 5) !== "file:"
-//            && !deferredReload
-//            && !connectionHelper.haveNetworkConnectivity()) {
-
-//            deferredReload = true
-//            deferredLoad = null
-//            connectionHelper.attemptToConnectNetwork()
-//            return
-//        }
-
-        contentItem.reload()
     }
 
     function sendAsyncMessage(name, data) {
@@ -86,36 +38,38 @@ WebContainer {
         contentItem.sendAsyncMessage(name, data)
     }
 
+    function grabActivePage() {
+        if (webView.contentItem) {
+            webView.privateMode ? webView.contentItem.grabThumbnail() : webView.contentItem.grabToFile()
+        }
+    }
+
     width: parent.width
     height: portrait ? Screen.height : Screen.width
     foreground: Qt.application.active
+    allowHiding: !resourceController.videoActive && !resourceController.audioActive
     inputPanelHeight: window.pageStack.panelSize
     inputPanelOpenHeight: window.pageStack.imSize
-    fullscreenMode: (contentItem && contentItem.chromeGestureEnabled && !contentItem.chrome) || webView.inputPanelVisible || !webView.foreground || (contentItem && contentItem.fullscreen) || firstUseFullscreen
-    _readyToLoad: contentItem && contentItem.viewReady && tabModel.loaded
+    fullscreenMode: (contentItem && contentItem.chromeGestureEnabled && !contentItem.chrome) ||
+                    (contentItem && contentItem.fullscreen)
     decoratorColor: Theme.highlightDimmerColor
 
-    loading: contentItem ? contentItem.loading : false
     favicon: contentItem ? contentItem.favicon : ""
 
     webPageComponent: webPageComponent
 
-    tabModel: TabModel {
-        // Enable browsing after new tab actually created or it was not even requested
-        browsing: webView.active && !hasNewTabData && contentItem && contentItem.loaded
-    }
-
-    onTriggerLoad: webView.load(url, title)
+    visible: WebUtils.firstUseDone
 
     WebViewCreator {
         activeWebView: contentItem
         // onNewWindowRequested is always handled as synchronous operation (not through newTab).
-        onNewWindowRequested: webView.loadNewTab(url, "", parentId)
+        onNewWindowRequested: tabModel.newTab(url, "", parentId)
     }
 
     Rectangle {
         id: background
         anchors.fill: parent
+        visible: foreground || contentItem
         color: contentItem && contentItem.bgcolor ? contentItem.bgcolor : "white"
     }
 
@@ -127,12 +81,24 @@ WebContainer {
             property int iconSize
             property string iconType
             property Item textSelectionController: null
+            readonly property bool activeWebPage: container.tabId == tabId
 
-            loaded: loadProgress === 100 && !loading
-            enabled: container.active
+            fullscreenHeight: container.fullscreenHeight
+            toolbarHeight: container.toolbarHeight
+
+            enabled: webView.enabled
+            // Active could pause e.g. video in cover by anding
+            // Qt.application.active to visible
+            // TODO: This should still be futher investigated.
+            // Guarding of suspend/resume & gc combo
+            // Page loading should finish even if it would be at background.
+            // Slow network (2G). Maybe we need something like
+            // suspend() { if (loaded) { suspendView() } } for suspend calls.
+            active: visible || activeWebPage
+
             // There needs to be enough content for enabling chrome gesture
-            chromeGestureThreshold: container.toolbarHeight
-            chromeGestureEnabled: contentHeight > container.height + chromeGestureThreshold
+            chromeGestureThreshold: toolbarHeight / 2
+            chromeGestureEnabled: (contentHeight > fullscreenHeight + toolbarHeight) && !forcedChrome
 
             signal selectionRangeUpdated(variant data)
             signal selectionCopied(variant data)
@@ -142,19 +108,16 @@ WebContainer {
             width: container.width
             state: ""
 
-            onLoadProgressChanged: {
-                // Ignore first load progress if it is directly 50%
-                if (container.loadProgress === 0 && loadProgress === 50) {
-                    return
-                }
+            onClearGrabResult: tabModel.updateThumbnailPath(tabId, "")
+            onGrabResult: tabModel.updateThumbnailPath(tabId, fileName)
 
-                if (loadProgress > container.loadProgress) {
-                    container.loadProgress = loadProgress
-                }
-            }
+            // Image data is base64 encoded which can be directly used as source in Image element
+            onThumbnailResult: tabModel.updateThumbnailPath(tabId, data)
 
             onUrlChanged: {
                 if (url == "about:blank") return
+
+                webView.findInPageHasResult = false
 
                 if (!PopupHandler.isRejectedGeolocationUrl(url)) {
                     PopupHandler.rejectedGeolocationUrl = ""
@@ -180,26 +143,6 @@ WebContainer {
                 }
             }
 
-            onViewInitialized: {
-                addMessageListener("chrome:linkadded")
-                addMessageListener("embed:alert")
-                addMessageListener("embed:confirm")
-                addMessageListener("embed:prompt")
-                addMessageListener("embed:auth")
-                addMessageListener("embed:login")
-                addMessageListener("embed:permissions")
-                addMessageListener("Content:ContextMenu")
-                addMessageListener("Content:SelectionRange");
-                addMessageListener("Content:SelectionCopied");
-                addMessageListener("embed:selectasync")
-                addMessageListener("embed:filepicker")
-
-                loadFrameScript("chrome://embedlite/content/SelectAsyncHelper.js")
-                loadFrameScript("chrome://embedlite/content/embedhelper.js")
-
-                viewReady = true
-            }
-
             onDraggingChanged: {
                 if (dragging && loading) {
                     userHasDraggedWhileLoading = true
@@ -208,7 +151,7 @@ WebContainer {
 
             onLoadedChanged: {
                 if (loaded && !userHasDraggedWhileLoading) {
-                    container.resetHeight(false)
+                    resetHeight(false)
                     if (resurrectedContentRect) {
                         sendAsyncMessage("embedui:zoomToRect",
                                          {
@@ -224,15 +167,21 @@ WebContainer {
                 if (loaded && webView.background) {
                     suspendView();
                 }
+
+                if (loaded) {
+                    webView.privateMode ? grabThumbnail() : grabToFile()
+                }
             }
 
             onLoadingChanged: {
                 if (loading) {
                     userHasDraggedWhileLoading = false
-                    container.loadProgress = 0
                     webPage.chrome = true
                     favicon = ""
-                    container.resetHeight(false)
+                    iconType = ""
+                    iconSize = 0
+
+                    resetHeight(false)
                 }
             }
 
@@ -240,9 +189,9 @@ WebContainer {
                 switch (message) {
                 case "chrome:linkadded": {
                     var parsedFavicon = false
-                    if (data.href && data.rel === "icon"
-                            && iconType !== "apple-touch-icon"
-                            && iconType !== "apple-touch-icon-precomposed") {
+                    var acceptedTouchIcon = (iconType === "apple-touch-icon" || iconType === "apple-touch-icon-precomposed")
+                    var acceptableTouchIcon = (data.rel === "apple-touch-icon" || data.rel === "apple-touch-icon-precomposed")
+                    if (data.href && (data.rel === "icon" || acceptableTouchIcon)) {
                         var sizes = []
                         if (data.sizes) {
                             var digits = data.sizes.split("x")
@@ -253,22 +202,20 @@ WebContainer {
                         } else {
                             sizes = data.href.match(/\d+/)
                         }
+
                         for (var i in sizes) {
                             var faviconSize = parseInt(sizes[i])
-                            // Accept largest icon but one that is still smaller than icon size large.
-                            if (faviconSize && faviconSize > iconSize && faviconSize <= Theme.iconSizeLarge) {
+                            // Accept largest icon but one that is still smaller than Theme.itemSizeExtraLarge.
+                            if (faviconSize && faviconSize > iconSize && faviconSize <= Theme.itemSizeExtraLarge) {
                                 iconSize = faviconSize
                                 parsedFavicon = true
                             }
                         }
                     }
 
-                    if (data.rel === "shortcut icon"
-                            || data.rel === "apple-touch-icon"
-                            || data.rel === "apple-touch-icon-precomposed"
-                            || parsedFavicon) {
+                    if (!acceptedTouchIcon && (data.rel === "shortcut icon" || acceptableTouchIcon || parsedFavicon)) {
                         favicon = data.href
-                        iconType = data.rel
+                        iconType = iconSize >= Theme.iconSizeMedium ? data.rel : ""
                     }
                     break
                 }
@@ -315,6 +262,14 @@ WebContainer {
                     webPage.selectionRangeUpdated(data)
                     break
                 }
+                case "embed:find": {
+                    // Found, or found wrapped
+                    if( data.r == 0 || data.r == 2) {
+                        webView.findInPageHasResult = true
+                    } else {
+                        webView.findInPageHasResult = false
+                    }
+                }
                 }
             }
 
@@ -342,12 +297,18 @@ WebContainer {
                 }
             }
 
+            Behavior on opacity { FadeAnimation {} }
+
+            // We decided to disable "text selection" until we understand how it
+            // should look like in Sailfish.
+            // TextSelectionController {}
             states: State {
                 name: "boundHeightControl"
-                when: container.inputPanelVisible || !container.foreground
+                when: container.inputPanelVisible && container.enabled
                 PropertyChanges {
                     target: webPage
-                    height: container.parent.height
+                    // was floor
+                    height: Math.ceil(container.parent.height)
                 }
             }
         }
@@ -381,7 +342,7 @@ WebContainer {
         width: contentItem ? contentItem.horizontalScrollDecorator.size : 0
         height: 5
         x: contentItem ? contentItem.horizontalScrollDecorator.position : 0
-        y: webView.parent.height - (fullscreenMode ? 0 : toolbarHeight) - height
+        y: webView.height - height
         z: 1
         color: decoratorColor
         smooth: true
@@ -391,38 +352,10 @@ WebContainer {
         Behavior on opacity { NumberAnimation { properties: "opacity"; duration: 400 } }
     }
 
-//    ConnectionHelper {
-//        id: connectionHelper
-
-//        onNetworkConnectivityEstablished: {
-//            var url
-//            var title
-
-//            if (deferredLoad) {
-//                url = deferredLoad["url"]
-//                title = deferredLoad["title"]
-//                deferredLoad = null
-//                webView.load(url, title, true)
-//            } else if (deferredReload) {
-//                deferredReload = false
-//                contentItem.reload()
-//            }
-//        }
-
-//        onNetworkConnectivityUnavailable: {
-//            if (contentItem) {
-//                deferredLoad = null
-//                deferredReload = false
-//            }
-//        }
-//    }
-
     ResourceController {
         id: resourceController
         webView: contentItem
         background: webView.background
-
-        //onWebViewSuspended: connectionHelper.closeNetworkSession()
     }
 
     Timer {
@@ -431,7 +364,11 @@ WebContainer {
         interval: 1000
     }
 
-    //Component.onDestruction: connectionHelper.closeNetworkSession()
+    Component {
+        id: pickerCreator
+        PickerCreator {}
+    }
+
     Component.onCompleted: {
         PopupHandler.auxTimer = auxTimer
         PopupHandler.pageStack = pageStack
@@ -439,5 +376,6 @@ WebContainer {
         PopupHandler.resourceController = resourceController
         PopupHandler.WebUtils = WebUtils
         PopupHandler.tabModel = tabModel
+        PopupHandler.pickerCreator = pickerCreator
     }
 }

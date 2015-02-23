@@ -10,7 +10,8 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "declarativewebcontainer.h"
-#include "declarativetabmodel.h"
+#include "persistenttabmodel.h"
+#include "privatetabmodel.h"
 #include "declarativewebpage.h"
 #include "dbmanager.h"
 #include "downloadmanager.h"
@@ -30,48 +31,49 @@
 #include <qmozcontext.h>
 #include <QGuiApplication>
 
+#ifndef DEBUG_LOGS
+#define DEBUG_LOGS 0
+#endif
+
 DeclarativeWebContainer::DeclarativeWebContainer(QQuickItem *parent)
     : QQuickItem(parent)
     , m_webPage(0)
     , m_model(0)
     , m_webPageComponent(0)
+    , m_settingManager(SettingManager::instance())
     , m_foreground(true)
-    , m_background(false)
-    , m_windowVisible(false)
-    , m_backgroundTimer(0)
-    , m_active(false)
+    , m_allowHiding(true)
     , m_popupActive(false)
     , m_portrait(true)
     , m_fullScreenMode(false)
+    , m_fullScreenHeight(0.0)
     , m_inputPanelVisible(false)
     , m_inputPanelHeight(0.0)
     , m_inputPanelOpenHeight(0.0)
     , m_toolbarHeight(0.0)
+    , m_tabId(0)
     , m_loading(false)
     , m_loadProgress(0)
     , m_canGoForward(false)
     , m_canGoBack(false)
     , m_realNavigation(false)
-    , m_readyToLoad(false)
-    , m_maxLiveTabCount(5)
-    , m_deferredReload(false)
+    , m_completed(false)
+    , m_initialized(false)
+    , m_privateMode(m_settingManager->autostartPrivateBrowsing())
 {
-    m_webPages.reset(new WebPages(this));
-    m_settingManager.reset(new SettingManager(this));
     setFlag(QQuickItem::ItemHasContents, true);
-    if (!window()) {
-        connect(this, SIGNAL(windowChanged(QQuickWindow*)), this, SLOT(handleWindowChanged(QQuickWindow*)));
-    } else {
-        connect(window(), SIGNAL(visibleChanged(bool)), this, SLOT(windowVisibleChanged(bool)));
-    }
 
-    connect(&m_screenCapturer, SIGNAL(finished()), this, SLOT(screenCaptureReady()));
+    m_webPages = new WebPages(this);
+    m_persistentTabModel = new PersistentTabModel(this);
+    m_privateTabModel = new PrivateTabModel(this);
+
+    setTabModel(privateMode() ? m_privateTabModel.data() : m_persistentTabModel.data());
+
+    connect(DownloadManager::instance(), SIGNAL(initializedChanged()), this, SLOT(initialize()));
     connect(DownloadManager::instance(), SIGNAL(downloadStarted()), this, SLOT(onDownloadStarted()));
-    connect(DBManager::instance(), SIGNAL(thumbPathChanged(int,QString)),
-            this, SLOT(onPageThumbnailChanged(int,QString)));
-    connect(this, SIGNAL(maxLiveTabCountChanged()), this, SLOT(manageMaxTabCount()));
-    connect(this, SIGNAL(_readyToLoadChanged()), this, SLOT(onReadyToLoad()));
-    connect(this, SIGNAL(heightChanged()), this, SLOT(resetHeight()));
+    connect(QMozContext::GetInstance(), SIGNAL(onInitialized()), this, SLOT(initialize()));
+    connect(this, SIGNAL(portraitChanged()), this, SLOT(resetHeight()));
+    connect(this, SIGNAL(enabledChanged()), this, SLOT(handleEnabledChanged()));
 
     QString cacheLocation = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
     QDir dir(cacheLocation);
@@ -82,6 +84,9 @@ DeclarativeWebContainer::DeclarativeWebContainer(QQuickItem *parent)
 
     connect(this, SIGNAL(heightChanged()), this, SLOT(sendVkbOpenCompositionMetrics()));
     connect(this, SIGNAL(widthChanged()), this, SLOT(sendVkbOpenCompositionMetrics()));
+    connect(this, SIGNAL(foregroundChanged()), this, SLOT(updateWindowFlags()));
+
+    qApp->installEventFilter(this);
 }
 
 DeclarativeWebContainer::~DeclarativeWebContainer()
@@ -90,9 +95,6 @@ DeclarativeWebContainer::~DeclarativeWebContainer()
     if (m_webPage) {
         disconnect(m_webPage, 0, 0, 0);
     }
-
-    m_screenCapturer.cancel();
-    m_screenCapturer.waitForFinished();
 }
 
 DeclarativeWebPage *DeclarativeWebContainer::webPage() const
@@ -103,10 +105,27 @@ DeclarativeWebPage *DeclarativeWebContainer::webPage() const
 void DeclarativeWebContainer::setWebPage(DeclarativeWebPage *webPage)
 {
     if (m_webPage != webPage) {
+        // Disconnect previous page.
+        if (m_webPage) {
+            m_webPage->disconnect(this);
+        }
+
         m_webPage = webPage;
+
+        if (m_webPage) {
+            m_tabId = m_webPage->tabId();
+        } else {
+            m_tabId = 0;
+        }
+
         emit contentItemChanged();
-        emit titleChanged();
-        emit urlChanged();
+        emit tabIdChanged();
+        emit loadingChanged();
+
+        updateUrl(url());
+        updateTitle(title());
+
+        setLoadProgress(m_webPage ? m_webPage->loadProgress() : 0);
     }
 }
 
@@ -119,22 +138,24 @@ void DeclarativeWebContainer::setTabModel(DeclarativeTabModel *model)
 {
     if (m_model != model) {
         if (m_model) {
-            disconnect(m_model);
+            disconnect(m_model, 0, 0, 0);
         }
 
         m_model = model;
         if (m_model) {
-            connect(m_model, SIGNAL(activeTabChanged(int,int)), this, SLOT(onActiveTabChanged(int,int)));
-            connect(m_model, SIGNAL(loadedChanged()), this, SLOT(onModelLoaded()));
-            connect(m_model, SIGNAL(tabAdded(int)), this, SLOT(manageMaxTabCount()));
+            connect(m_model, SIGNAL(activeTabChanged(int,int,bool)), this, SLOT(onActiveTabChanged(int,int,bool)));
+            connect(m_model, SIGNAL(loadedChanged()), this, SLOT(initialize()));
             connect(m_model, SIGNAL(tabClosed(int)), this, SLOT(releasePage(int)));
             connect(m_model, SIGNAL(tabsCleared()), this, SLOT(onTabsCleared()));
-            // Try to make this to normal direct connection once we have removed QML_BAD_GUI_RENDER_LOOP.
-            connect(m_model, SIGNAL(newTabRequested(QString,QString)), this, SLOT(onNewTabRequested(QString,QString)), Qt::QueuedConnection);
-            connect(m_model, SIGNAL(updateActiveThumbnail()), this, SLOT(updateThumbnail()));
+            connect(m_model, SIGNAL(newTabRequested(QString,QString,int)), this, SLOT(onNewTabRequested(QString,QString,int)));
         }
         emit tabModelChanged();
     }
+}
+
+bool DeclarativeWebContainer::completed() const
+{
+    return m_completed;
 }
 
 bool DeclarativeWebContainer::foreground() const
@@ -155,9 +176,45 @@ void DeclarativeWebContainer::setForeground(bool active)
     }
 }
 
+int DeclarativeWebContainer::maxLiveTabCount() const
+{
+    return m_webPages->maxLivePages();
+}
+
+void DeclarativeWebContainer::setMaxLiveTabCount(int count)
+{
+    if (m_webPages->setMaxLivePages(count)) {
+        emit maxLiveTabCountChanged();
+    }
+}
+
+bool DeclarativeWebContainer::privateMode() const
+{
+    return m_privateMode;
+}
+
+void DeclarativeWebContainer::setPrivateMode(bool privateMode)
+{
+    if (m_privateMode != privateMode) {
+        m_privateMode = privateMode;
+        m_settingManager->setAutostartPrivateBrowsing(privateMode);
+        updateMode();
+        emit privateModeChanged();
+    }
+}
+
 bool DeclarativeWebContainer::background() const
 {
-    return m_background;
+    return m_webPage ? m_webPage->background() : false;
+}
+
+bool DeclarativeWebContainer::loading() const
+{
+    if (m_webPage) {
+        return m_webPage->loading();
+    } else {
+        return m_model ? m_model->count() : false;
+    }
 }
 
 int DeclarativeWebContainer::loadProgress() const
@@ -170,30 +227,6 @@ void DeclarativeWebContainer::setLoadProgress(int loadProgress)
     if (m_loadProgress != loadProgress) {
         m_loadProgress = loadProgress;
         emit loadProgressChanged();
-    }
-}
-
-bool DeclarativeWebContainer::active() const
-{
-    return m_active;
-}
-
-void DeclarativeWebContainer::setActive(bool active)
-{
-    if (m_active != active) {
-        m_active = active;
-        emit activeChanged();
-
-        // If dialog has been opened, we need to verify that input panel is not visible.
-        // This might happen when the user fills in login details to a form and
-        // presses enter to accept the form after which PasswordManagerDialog is pushed to pagestack
-        // on top the BrowserPage. Once PassowordManagerDialog is accepted/rejected
-        // this condition can be met. If active changes to true before keyboard is fully closed,
-        // then the inputPanelVisibleChanged() signal is emitted by setInputPanelHeight.
-        if (m_active && m_inputPanelHeight == 0 && m_inputPanelVisible) {
-            m_inputPanelVisible = false;
-            emit inputPanelVisibleChanged();
-        }
     }
 }
 
@@ -212,7 +245,7 @@ void DeclarativeWebContainer::setInputPanelHeight(qreal height)
     if (m_inputPanelHeight != height) {
         bool imVisibleChanged = false;
         m_inputPanelHeight = height;
-        if (m_active) {
+        if (isEnabled()) {
             if (m_inputPanelHeight == 0) {
                 if (m_inputPanelVisible) {
                     m_inputPanelVisible = false;
@@ -244,56 +277,58 @@ bool DeclarativeWebContainer::canGoBack() const
     return m_canGoBack;
 }
 
+int DeclarativeWebContainer::tabId() const
+{
+    return m_tabId;
+}
+
 QString DeclarativeWebContainer::title() const
 {
-    return m_webPage ? m_webPage->title() : "";
+    return m_webPage ? m_webPage->title() : m_title;
 }
 
 QString DeclarativeWebContainer::url() const
 {
-    return m_webPage ? m_webPage->url().toString() : "";
-}
-
-QString DeclarativeWebContainer::thumbnailPath() const
-{
-    return m_thumbnailPath;
-}
-
-void DeclarativeWebContainer::setThumbnailPath(QString thumbnailPath)
-{
-    if (m_thumbnailPath != thumbnailPath) {
-        m_thumbnailPath = thumbnailPath;
-        emit thumbnailPathChanged();
-    }
-}
-
-bool DeclarativeWebContainer::readyToLoad() const
-{
-    return m_readyToLoad;
-}
-
-void DeclarativeWebContainer::setReadyToLoad(bool readyToLoad)
-{
-    static bool browserReady = false;
-    if (!browserReady && readyToLoad) {
-        bool wasClearHistoryRequested = m_settingManager->clearHistoryRequested();
-        browserReady = true;
-        m_settingManager->initialize();
-        if (m_model && wasClearHistoryRequested) {
-            readyToLoad = false;
-            emit m_model->countChanged();
-        }
-    }
-
-    if (m_readyToLoad != readyToLoad) {
-        m_readyToLoad = readyToLoad;
-        emit _readyToLoadChanged();
-    }
+    return m_webPage ? m_webPage->url().toString() : m_url;
 }
 
 bool DeclarativeWebContainer::isActiveTab(int tabId)
 {
     return m_webPage && m_webPage->tabId() == tabId;
+}
+
+void DeclarativeWebContainer::load(QString url, QString title, bool force)
+{
+    if (url.isEmpty()) {
+        url = "about:blank";
+    }
+
+    if (m_webPage && m_webPage->viewReady()) {
+        m_webPage->loadTab(url, force);
+    } else if (!canInitialize()) {
+        updateUrl(url);
+        updateTitle(title);
+    } else if (m_model && m_model->count() == 0) {
+        // Browser running all tabs are closed.
+        m_model->newTab(url, title);
+    }
+}
+
+/**
+ * @brief DeclarativeWebContainer::reload
+ * Reloads the active tab. If not tabs exist this does nothing. If the page was
+ * virtualized it will be resurrected.
+ */
+void DeclarativeWebContainer::reload(bool force)
+{
+    if (m_tabId > 0) {
+        if (force && m_webPage && m_webPage->viewReady() && m_webPage->tabId() == m_tabId) {
+            // Reload live active tab directly.
+            m_webPage->reload();
+        } else {
+            loadTab(m_tabId, m_url, m_title, force);
+        }
+    }
 }
 
 void DeclarativeWebContainer::goForward()
@@ -348,7 +383,7 @@ void DeclarativeWebContainer::goBack()
     }
 }
 
-bool DeclarativeWebContainer::activatePage(int tabId, bool force)
+bool DeclarativeWebContainer::activatePage(int tabId, bool force, int parentId)
 {
     if (!m_model) {
         return false;
@@ -356,48 +391,47 @@ bool DeclarativeWebContainer::activatePage(int tabId, bool force)
 
     m_webPages->initialize(this, m_webPageComponent.data());
     if ((m_model->loaded() || force) && tabId > 0 && m_webPages->initialized()) {
-        WebPageActivationData activationData = m_webPages->page(tabId, m_model->newTabParentId());
+        WebPageActivationData activationData = m_webPages->page(tabId, parentId);
         setWebPage(activationData.webPage);
-        m_webPage->setChrome(true);
         // Reset always height so that orentation change is taken into account.
-        resetHeight();
-        setLoadProgress(m_webPage->loadProgress());
-
+        m_webPage->forceChrome(false);
+        m_webPage->setChrome(true);
         connect(m_webPage, SIGNAL(imeNotification(int,bool,int,int,QString)),
                 this, SLOT(imeNotificationChanged(int,bool,int,int,QString)), Qt::UniqueConnection);
-        connect(m_webPage, SIGNAL(contentHeightChanged()), this, SLOT(resetHeight()), Qt::UniqueConnection);
-        connect(m_webPage, SIGNAL(scrollableOffsetChanged()), this, SLOT(resetHeight()), Qt::UniqueConnection);
         connect(m_webPage, SIGNAL(windowCloseRequested()), this, SLOT(closeWindow()), Qt::UniqueConnection);
         connect(m_webPage, SIGNAL(urlChanged()), this, SLOT(onPageUrlChanged()), Qt::UniqueConnection);
+        connect(m_webPage, SIGNAL(loadingChanged()), this, SLOT(updateLoading()), Qt::UniqueConnection);
+        connect(m_webPage, SIGNAL(loadProgressChanged()), this, SLOT(updateLoadProgress()), Qt::UniqueConnection);
         connect(m_webPage, SIGNAL(titleChanged()), this, SLOT(onPageTitleChanged()), Qt::UniqueConnection);
         connect(m_webPage, SIGNAL(domContentLoadedChanged()), this, SLOT(sendVkbOpenCompositionMetrics()), Qt::UniqueConnection);
+        connect(m_webPage, SIGNAL(backgroundChanged()), this, SIGNAL(backgroundChanged()), Qt::UniqueConnection);
         return activationData.activated;
     }
     return false;
 }
 
-void DeclarativeWebContainer::loadNewTab(QString url, QString title, int parentId)
+bool DeclarativeWebContainer::alive(int tabId)
 {
-    m_model->newTabData(url, title, webPage(), parentId);
-    // This could handle new page creation directly if/
-    // when connection helper is accessible from QML.
-    emit triggerLoad(url, title);
+    return m_webPages->alive(tabId);
 }
 
-void DeclarativeWebContainer::captureScreen()
+void DeclarativeWebContainer::updateMode()
 {
-    if (!m_webPage || !isVisible()) {
-        return;
+    setTabModel(privateMode() ? m_privateTabModel.data() : m_persistentTabModel.data());
+    setActiveTabData();
+
+    // Hide currently active web page
+    if (m_webPage) {
+        m_webPage->setVisible(false);
+        m_webPage->setOpacity(1.0);
     }
 
-    if (m_active && m_webPage->domContentLoaded() && !m_popupActive) {
-        int size = QGuiApplication::primaryScreen()->size().width();
-        if (!m_portrait && !m_fullScreenMode) {
-            size -= m_toolbarHeight;
-        }
-
-        qreal rotation = parentItem() ? parentItem()->rotation() : 0;
-        captureScreen(size, rotation);
+    // Reload active tab from new mode
+    if (m_model->count() > 0) {
+        reload(false);
+    } else {
+        setWebPage(NULL);
+        emit contentItemChanged();
     }
 }
 
@@ -406,30 +440,31 @@ void DeclarativeWebContainer::dumpPages() const
     m_webPages->dumpPages();
 }
 
+bool DeclarativeWebContainer::eventFilter(QObject *obj, QEvent *event)
+{
+    // Hiding stops rendering. Don't pass it through if hiding is not allowed.
+    if (event->type() == QEvent::Expose && window() && !window()->isExposed() && !m_allowHiding) {
+        return true;
+    }
+    return QObject::eventFilter(obj, event);
+}
+
+void DeclarativeWebContainer::componentComplete()
+{
+    QQuickItem::componentComplete();
+    if (m_initialized && !m_completed) {
+        m_completed = true;
+        emit completedChanged();
+    }
+}
+
 void DeclarativeWebContainer::resetHeight(bool respectContentHeight)
 {
-    if (!m_webPage || !m_webPage->state().isEmpty()) {
+    if (!m_webPage) {
         return;
     }
 
-    qreal fullHeight = height();
-
-    // Application active
-    if (respectContentHeight) {
-        // Handle webPage height over here, BrowserPage.qml loading
-        // reset might be redundant as we have also loaded trigger
-        // reset. However, I'd leave it there for safety reasons.
-        // We need to reset height always back to short height when loading starts
-        // so that after tab change there is always initial short composited height.
-        // Height may expand when content is moved.
-        if (contentHeight() > (fullHeight + m_toolbarHeight) || m_webPage->fullscreen()) {
-            m_webPage->setHeight(fullHeight);
-        } else {
-            m_webPage->setHeight(fullHeight - m_toolbarHeight);
-        }
-    } else {
-        m_webPage->setHeight(fullHeight - m_toolbarHeight);
-    }
+    m_webPage->resetHeight(respectContentHeight);
 }
 
 void DeclarativeWebContainer::imeNotificationChanged(int state, bool open, int cause, int focusChange, const QString &type)
@@ -461,216 +496,150 @@ qreal DeclarativeWebContainer::contentHeight() const
     }
 }
 
-DeclarativeWebContainer::ScreenCapture DeclarativeWebContainer::saveToFile(QImage image, QRect cropBounds, int tabId, qreal rotate)
+void DeclarativeWebContainer::handleEnabledChanged()
 {
-    QString path = QString("%1/tab-%2-thumb.png").arg(QStandardPaths::writableLocation(QStandardPaths::CacheLocation)).arg(tabId);
-    QTransform transform;
-    transform.rotate(360 - rotate);
-    image = image.transformed(transform);
-    image = image.copy(cropBounds);
-
-    ScreenCapture capture;
-    if(image.save(path)) {
-        capture.tabId = tabId;
-        capture.path = path;
-    } else {
-        capture.tabId = -1;
-        qWarning() << Q_FUNC_INFO << "failed to save image" << path;
-    }
-    return capture;
-}
-
-void DeclarativeWebContainer::timerEvent(QTimerEvent *event)
-{
-    if (m_backgroundTimer == event->timerId()) {
-        if (window()) {
-            // Guard window visibility change was not cancelled after timer triggered.
-            bool tmpVisible = window()->isVisible();
-            // m_windowVisible == m_background visibility changed
-            if (tmpVisible == m_windowVisible && m_windowVisible == m_background) {
-                m_background = !m_windowVisible;
-                emit backgroundChanged();
-            }
-        }
-        killTimer(m_backgroundTimer);
+    // If dialog has been opened, we need to verify that input panel is not visible.
+    // This might happen when the user fills in login details to a form and
+    // presses enter to accept the form after which PasswordManagerDialog is pushed to pagestack
+    // on top the BrowserPage. Once PassowordManagerDialog is accepted/rejected
+    // this condition can be met. If active changes to true before keyboard is fully closed,
+    // then the inputPanelVisibleChanged() signal is emitted by setInputPanelHeight.
+    if (isEnabled() && m_inputPanelHeight == 0 && m_inputPanelVisible) {
+        m_inputPanelVisible = false;
+        emit inputPanelVisibleChanged();
     }
 }
 
-void DeclarativeWebContainer::windowVisibleChanged(bool visible)
-{
-    Q_UNUSED(visible);
-    if (window()) {
-        m_windowVisible = window()->isVisible();
-        m_backgroundTimer = startTimer(1000);
-    }
-}
-
-void DeclarativeWebContainer::handleWindowChanged(QQuickWindow *window)
-{
-    if (window) {
-        connect(window, SIGNAL(visibleChanged(bool)), this, SLOT(windowVisibleChanged(bool)));
-    }
-}
-
-void DeclarativeWebContainer::onActiveTabChanged(int oldTabId, int activeTabId)
+void DeclarativeWebContainer::onActiveTabChanged(int oldTabId, int activeTabId, bool loadActiveTab)
 {
     if (activeTabId <= 0) {
-        setThumbnailPath("");
         return;
     }
-    const Tab &tab = m_model->activeTab();
-#ifdef DEBUG_LOGS
-    qDebug() << "canGoBack = " << m_canGoBack << "canGoForward = " << m_canGoForward << &tab;
-#endif
+    setActiveTabData();
 
-    updateNavigationStatus(tab);
-
-    setThumbnailPath(tab.thumbnailPath());
-
-    if (m_model->hasNewTabData()) {
+    if (!loadActiveTab) {
         return;
     }
 
     // Switch to different tab.
     if (oldTabId != activeTabId) {
-        QString tabUrl = tab.url();
-
-        if (activatePage(activeTabId, true) && m_readyToLoad
-                && (m_webPage->tabId() != activeTabId || m_webPage->url().toString() != tabUrl)) {
-            emit triggerLoad(tabUrl, tab.title());
-        }
-        manageMaxTabCount();
+        reload(false);
     } else if (!m_realNavigation && isActiveTab(activeTabId) && m_webPage->backForwardNavigation()) {
-        emit triggerLoad(tab.url(), tab.title());
+        m_webPage->loadTab(m_url, false);
     }
 }
 
-void DeclarativeWebContainer::screenCaptureReady()
-{
-    ScreenCapture capture = m_screenCapturer.result();
-#ifdef DEBUG_LOGS
-    qDebug() << capture.tabId << capture.path << isActiveTab(capture.tabId);
-#endif
-    if (capture.tabId != -1) {
-        // Update immediately without dbworker round trip.
-        if (isActiveTab(capture.tabId)) {
-            setThumbnailPath(capture.path);
-        }
-        DBManager::instance()->updateThumbPath(capture.tabId, capture.path);
-    }
-}
-
-void DeclarativeWebContainer::onModelLoaded()
+void DeclarativeWebContainer::initialize()
 {
     // This signal handler is responsible for activating
     // the first page.
+    if (!canInitialize() || m_initialized) {
+        return;
+    }
+
+    bool clearTabs = m_settingManager->clearHistoryRequested();
+    int oldCount = m_model->count();
+
+    // Clear tabs immediately from the model.
+    if (clearTabs) {
+        m_model->clear();
+    }
+
+    // If data was cleared when initialized and we had tabs in previous
+    // session, reset tab model to unloaded state. DBManager emits
+    // tabsAvailable with empty list when tabs are cleared => tab model
+    // changes back to loaded and the initialize() slot gets called again.
+    if (m_settingManager->initialize() && (oldCount > 0) && clearTabs) {
+        m_model->setUnloaded();
+        return;
+    }
+
+    // Load test
+    // 1) no tabs and firstUseDone or we have incoming url, load initial url or home page to a new tab.
+    // 2) model has tabs, load initial url or active tab.
     bool firstUseDone = DeclarativeWebUtils::instance()->firstUseDone();
-    if (m_model->hasNewTabData() || (m_model->count() == 0 && firstUseDone)) {
-        activatePage(m_model->nextTabId(), true);
+    if (m_model->count() == 0 && (firstUseDone || !m_url.isEmpty())) {
+        QString url = m_url.isEmpty() ? DeclarativeWebUtils::instance()->homePage() : m_url;
+        QString title = url == m_url ? m_title : "";
+        m_model->newTab(url, title);
     } else if (m_model->count() > 0) {
         const Tab &tab = m_model->activeTab();
-        activatePage(tab.tabId(), true);
+        // Activating a web page updates url and title from the active web page.
+        // So, let's figure out url and title, active page, and then set initial url and title.
+        QString url = m_url.isEmpty() ? tab.url() : m_url;
+        QString title = url == m_url ? m_title : tab.title();
+        loadTab(tab.tabId(), url, title, true);
     }
+
+    if (isComponentComplete() && !m_completed) {
+        m_completed = true;
+        emit completedChanged();
+    }
+    m_initialized = true;
 }
 
 void DeclarativeWebContainer::onDownloadStarted()
 {
-    // This is not 100% solid. A new tab is created for every incoming
-    // url. In slow network connectivity one can close previous tab or
-    // create a new tab before downloadStarted is emitted
-    // by DownloadManager. To get this to the 100%, we would need to
-    // pass windowId of the active window when download is started and close
-    // the passed windowId instead.
-    if (m_model && m_model->hasNewTabData() && m_model->count() > 0 && m_webPage) {
-        DeclarativeWebPage *previousWebPage = qobject_cast<DeclarativeWebPage *>(m_model->newTabPreviousPage());
-        releasePage(m_webPage->tabId());
-        if (previousWebPage) {
-            activatePage(previousWebPage->tabId());
-        } else if (m_model->count() == 0) {
-            // Download doesn't add tab to model. Mimic
-            // model change in case tabs count goes to zero.
-            emit m_model->countChanged();
+    // This is not 100% solid. A newTab is called on incoming
+    // url (during browser start) if no tabs exist (waitingForNewTab). In slow network
+    // connectivity one can create a new tab before downloadStarted is emitted
+    // from DownloadManager. To get this to the 100%, we should add downloadStatus
+    // to the QmlMozView containing status of downloading.
+    if (m_model->waitingForNewTab())  {
+        m_model->setWaitingForNewTab(false);
+        updateUrl("");
+        updateTitle("");
+    } else {
+        // When downloading to an existing tab refresh url,
+        // title, and navigation status from the active tab. Trigger load for the tab
+        // if url differs. In case browser is started with a dl url we have an "incorrect" initial url.
+        QString oldUrl = m_url;
+        setActiveTabData();
+        if (m_url != url() || m_url != oldUrl) {
+            loadTab(m_tabId, m_url, m_title, true);
         }
+    }
+
+    if (m_model->count() == 0) {
+        // Download doesn't add tab to model. Mimic
+        // model change in case downloading was started without
+        // existing tabs.
+        emit m_model->countChanged();
     }
 }
 
-void DeclarativeWebContainer::onNewTabRequested(QString url, QString title)
+void DeclarativeWebContainer::onNewTabRequested(QString url, QString title, int parentId)
 {
+    // TODO: Remove unused title argument.
+    Q_UNUSED(title);
     // An empty tab for cleaning previous navigation status.
     Tab tab;
     updateNavigationStatus(tab);
 
-    if (m_active) {
-        loadNewTab(url, title, 0);
-    } else {
-        if (m_webPage) {
-            m_webPage->setVisible(false);
-            setWebPage(0);
-        }
-        QMetaObject::invokeMethod(this, "onNewTabRequested", Qt::QueuedConnection,
-                                  Q_ARG(QString, url),
-                                  Q_ARG(QString, title));
-    }
-}
-
-void DeclarativeWebContainer::onReadyToLoad()
-{
-    // Triggered when tabs of tab model are available and QmlMozView is ready to load.
-    // Load test
-    // 1) tabModel.hasNewTabData -> loadTab (already activated view)
-    // 2) model has tabs, load active tab -> load (activate view when needed)
-    // 3) load home page -> load (activate view when needed)
-
-    // visible could be possible delay property for _readyToLoad if so wanted.
-    if (!m_readyToLoad || !m_model) {
-        return;
+    if (m_webPage) {
+        m_webPage->setVisible(false);
+        m_webPage->setOpacity(1.0);
     }
 
-    if (m_model->hasNewTabData()) {
-        m_webPage->loadTab(m_model->newTabUrl(), false);
-    } else if (m_model->count() > 0) {
-        // First tab is actived when tabs are loaded to the tabs tabModel.
-        m_model->resetNewTabData();
-        const Tab &tab = m_model->activeTab();
-        emit triggerLoad(tab.url(), tab.title());
-    } else {
-        // This can happen only during startup.
-        emit triggerLoad(DeclarativeWebUtils::instance()->homePage(), "");
+    if (activatePage(m_model->nextTabId(), false, parentId)) {
+        m_webPage->setInitialUrl(url);
     }
 }
 
 void DeclarativeWebContainer::onTabsCleared()
 {
-    m_webPages->clear();
-    setThumbnailPath("");
+    // Trigger contentItem changed and then reset title, url, and tabId.
     emit contentItemChanged();
-    emit titleChanged();
-    emit urlChanged();
-}
+    updateTitle("");
+    updateUrl("");
 
-/**
- * @brief DeclarativeTab::captureScreen
- * Rotation transformation is applied first, then geometry values on top of it.
- * @param size
- * @param rotate clockwise rotation of the image in degrees
- */
-void DeclarativeWebContainer::captureScreen(int size, qreal rotate)
-{
-    if (!window() || !window()->isActive() || !m_webPage) {
-        return;
+    if (m_tabId != 0) {
+        m_tabId = 0;
+        emit tabIdChanged();
     }
 
-    // Cleanup old thumb.
-    setThumbnailPath("");
-
-    QImage image = window()->grabWindow();
-    QRect cropBounds(0, 0, size, size);
-
-#ifdef DEBUG_LOGS
-    qDebug() << "about to set future";
-#endif
-    // asynchronous save to avoid the slow I/O
-    m_screenCapturer.setFuture(QtConcurrent::run(this, &DeclarativeWebContainer::saveToFile, image, cropBounds, m_webPage->tabId(), rotate));
+    emit loadingChanged();
+    setLoadProgress(0);
 }
 
 int DeclarativeWebContainer::parentTabId(int tabId) const
@@ -687,12 +656,22 @@ void DeclarativeWebContainer::releasePage(int tabId, bool virtualize)
         m_webPages->release(tabId, virtualize);
         // Successfully destroyed. Emit relevant property changes.
         if (!m_webPage) {
+            m_tabId = 0;
+            if (m_canGoBack) {
+                m_canGoBack = false;
+                emit canGoBackChanged();
+            }
+
+            if (m_canGoForward) {
+                m_canGoForward = false;
+                emit canGoForwardChanged();
+            }
+
             emit contentItemChanged();
-            emit titleChanged();
-            emit urlChanged();
-            setThumbnailPath("");
+            updateUrl("");
+            updateTitle("");
+            emit tabIdChanged();
         }
-        m_model->resetNewTabData();
     }
 }
 
@@ -714,20 +693,39 @@ void DeclarativeWebContainer::onPageUrlChanged()
     DeclarativeWebPage *webPage = qobject_cast<DeclarativeWebPage *>(sender());
     if (webPage && m_model) {
         QString url = webPage->url().toString();
-        if (url != "about:blank") {
-            int tabId = webPage->tabId();
-            bool activeTab = isActiveTab(tabId);
-            // Update initial back / forward navigation state
-            if (activeTab && !webPage->urlHasChanged()) {
+        int tabId = webPage->tabId();
+        bool activeTab = isActiveTab(tabId);
+        // Update initial back / forward navigation state
+        if (activeTab && !webPage->urlHasChanged()) {
+            const Tab &tab = m_model->activeTab();
+            updateNavigationStatus(tab);
+        }
+
+        // Initial url should not be considered as navigation request that increases navigation history.
+        // Cleanup this.
+        bool initialLoad = !webPage->urlHasChanged();
+        // Virtualized pages need to be checked from the model.
+        if (webPage->boundToModel() || m_model->contains(tabId)) {
+            m_model->updateUrl(tabId, activeTab, url, webPage->backForwardNavigation(), initialLoad);
+        } else {
+            // Adding tab to the model is delayed so that url resolved to download link do not get added
+            // to the model. We should have downloadStatus(status) and linkClicked(url) signals in QmlMozView.
+            // To distinguish linkClicked(url) from downloadStatus(status) the downloadStatus(status) signal
+            // should not be emitted when link clicking started downloading or opened (will open) a new window.
+            m_model->addTab(url, "");
+        }
+        webPage->bindToModel();
+        webPage->setUrlHasChanged(true);
+
+        bool wasBackForwardNavigation = webPage->backForwardNavigation();
+        webPage->setBackForwardNavigation(false);
+
+        if (activeTab && webPage == m_webPage) {
+            updateUrl(url);
+
+            if (!initialLoad && !wasBackForwardNavigation) {
                 const Tab &tab = m_model->activeTab();
                 updateNavigationStatus(tab);
-            }
-
-            m_model->updateUrl(tabId, activeTab, url, webPage->backForwardNavigation(), !webPage->urlHasChanged());
-            webPage->setUrlHasChanged(true);
-            webPage->setBackForwardNavigation(false);
-            if (activeTab && webPage == m_webPage) {
-                emit urlChanged();
             }
         }
     }
@@ -737,48 +735,70 @@ void DeclarativeWebContainer::onPageTitleChanged()
 {
     DeclarativeWebPage *webPage = qobject_cast<DeclarativeWebPage *>(sender());
     if (webPage && m_model) {
+        QString url = webPage->url().toString();
         QString title = webPage->title();
         int tabId = webPage->tabId();
         bool activeTab = isActiveTab(tabId);
-        m_model->updateTitle(tabId, activeTab, title);
+        m_model->updateTitle(tabId, activeTab, url, title);
 
         if (activeTab && webPage == m_webPage) {
-            emit titleChanged();
+            updateTitle(title);
         }
     }
 }
 
-void DeclarativeWebContainer::onPageThumbnailChanged(int tabId, QString path)
+void DeclarativeWebContainer::updateLoadProgress()
 {
-    if (isActiveTab(tabId)) {
-        setThumbnailPath(path);
-    }
-
-    if (m_model) {
-        m_model->updateThumbnailPath(tabId, isActiveTab(tabId), path);
-    }
-}
-
-void DeclarativeWebContainer::updateThumbnail()
-{
-    const Tab &tab = m_model->activeTab();
-    if (isActiveTab(tab.tabId()) && tab.isValid()) {
-        captureScreen();
-    }
-}
-
-void DeclarativeWebContainer::manageMaxTabCount()
-{
-    // Minimum is 1 tab.
-    if (m_maxLiveTabCount < 1 || !m_model) {
+    if (!m_webPage || m_loadProgress == 0 && m_webPage->loadProgress() == 50) {
         return;
     }
 
-    const QList<Tab> &tabs = m_model->tabs();
+    int progress = m_webPage->loadProgress();
+    if (progress > m_loadProgress) {
+        setLoadProgress(progress);
+    }
+}
 
-    // ActiveTab + m_maxLiveTabCount -1 == m_maxLiveTabCount
-    for (int i = m_maxLiveTabCount - 1; i < tabs.count() && m_webPages && m_webPages->count() > m_maxLiveTabCount; ++i) {
-        releasePage(tabs.at(i).tabId(), true);
+void DeclarativeWebContainer::updateLoading()
+{
+    if (m_webPage && m_webPage->loading()) {
+        setLoadProgress(0);
+    }
+
+    emit loadingChanged();
+}
+
+void DeclarativeWebContainer::setActiveTabData()
+{
+    const Tab &tab = m_model->activeTab();
+#if DEBUG_LOGS
+    qDebug() << "canGoBack = " << m_canGoBack << "canGoForward = " << m_canGoForward << &tab;
+#endif
+
+    updateNavigationStatus(tab);
+    updateUrl(tab.url());
+    updateTitle(tab.title());
+
+    if (m_tabId != tab.tabId()) {
+        m_tabId = tab.tabId();
+        emit tabIdChanged();
+    }
+}
+
+void DeclarativeWebContainer::updateWindowFlags()
+{
+    QQuickWindow *win = window();
+    if (win && m_webPage) {
+        static Qt::WindowFlags f = 0;
+        if (f == 0) {
+            f = win->flags();
+        }
+
+        if (!m_foreground) {
+            win->setFlags(f | Qt::CoverWindow | Qt::FramelessWindowHint);
+        } else {
+            win->setFlags(f);
+        }
     }
 }
 
@@ -811,8 +831,70 @@ void DeclarativeWebContainer::updateVkbHeight()
     if (width() > height()) {
         vkbHeight = 340;
     }
+    vkbHeight *= DeclarativeWebUtils::instance()->silicaPixelRatio();
 #endif
     m_inputPanelOpenHeight = vkbHeight;
+}
+
+/**
+ * Pass the newUrl. This should be used everywhere when
+ * url is about to change. E.g. when updating current contentItem.
+ * When both url and title are about to change call updateUrl first
+ * as it is more natural that way.
+ * @brief DeclarativeWebContainer::updateUrl
+ * @param newUrl
+ *
+ * See also updateTitle
+ */
+void DeclarativeWebContainer::updateUrl(const QString &newUrl)
+{
+    if (newUrl.isEmpty() && !m_completed) {
+        return;
+    }
+
+    if (m_url != newUrl) {
+        m_url = newUrl;
+        emit urlChanged();
+    }
+}
+
+/**
+ * Pass the newTitle. This should be used everywhere when
+ * title is about to change. E.g. when updating current contentItem.
+ * When both url and title are about to change call updateUrl first
+ * as it is more natural that way.
+ * @brief DeclarativeWebContainer::updateTitle
+ * @param newTitle
+ *
+ * See also updateUrl
+ */
+void DeclarativeWebContainer::updateTitle(const QString &newTitle)
+{
+    if (m_title != newTitle) {
+        m_title = newTitle;
+        emit titleChanged();
+    }
+}
+
+bool DeclarativeWebContainer::canInitialize() const
+{
+    return QMozContext::GetInstance()->initialized() && DownloadManager::instance()->initialized() && m_model && m_model->loaded();
+}
+
+void DeclarativeWebContainer::loadTab(int tabId, QString url, QString title, bool force)
+{
+    // TODO: Remove references to title.
+    Q_UNUSED(title);
+    if (activatePage(tabId, true) || force) {
+        // Note: active pages containing a "link" between each other (parent-child relationship)
+        // are not destroyed automatically e.g. in low memory notification.
+        // Hence, parentId is not necessary over here.
+        if (m_webPage->viewReady()) {
+            m_webPage->loadTab(url, force);
+        } else {
+            m_webPage->setInitialUrl(url);
+        }
+    }
 }
 
 void DeclarativeWebContainer::sendVkbOpenCompositionMetrics()

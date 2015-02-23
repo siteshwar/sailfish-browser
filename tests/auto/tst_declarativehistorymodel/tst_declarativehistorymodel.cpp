@@ -14,7 +14,7 @@
 #include <QSignalSpy>
 #include <qqml.h>
 
-#include "declarativetabmodel.h"
+#include "persistenttabmodel.h"
 #include "declarativehistorymodel.h"
 #include "testobject.h"
 
@@ -25,7 +25,7 @@ static const QByteArray QML_SNIPPET = \
         "   width: 100; height: 100\n" \
         "   property alias tabModel: tabModel\n" \
         "   property alias historyModel: historyModel\n" \
-        "   TabModel { id: tabModel }\n" \
+        "   PersistentTabModel { id: tabModel }\n" \
         "   HistoryModel { id: historyModel }\n" \
         "}\n";
 
@@ -50,6 +50,9 @@ private slots:
 
     void emptyTitles_data();
     void emptyTitles();
+
+    void searchWithSpecialChars_data();
+    void searchWithSpecialChars();
 
     void cleanupTestCase();
 
@@ -217,6 +220,40 @@ void tst_declarativehistorymodel::emptyTitles()
     }
 }
 
+
+void tst_declarativehistorymodel::searchWithSpecialChars_data()
+{
+    QTest::addColumn<QString>("url");
+    QTest::addColumn<QString>("title");
+    QTest::addColumn<QString>("searchTerm");
+    QTest::addColumn<int>("expectedCount");
+    QTest::newRow("special_site") << "http://www.pöö.com/" << "wierd site" << "pöö" << 1;
+    QTest::newRow("special_title") << "http://www.foobar.com/" << "pöö wierd title" << "pöö" << 2;
+    QTest::newRow("special_escaped_chars") << "http://www.foobar.com/" << "special title: ';\";ö" << "';\";" << 1;
+    QTest::newRow("special_upper_case_special_char") << "http://www.foobar.com/" << "Ö is wierd char" << "Ö" << 2;
+}
+
+void tst_declarativehistorymodel::searchWithSpecialChars()
+{
+    // Clear previous search term / history count.
+    QSignalSpy countChangeSpy(historyModel, SIGNAL(countChanged()));
+    historyModel->search("");
+    waitSignals(countChangeSpy, 1);
+
+    QFETCH(QString, url);
+    QFETCH(QString, title);
+    QFETCH(QString, searchTerm);
+    QFETCH(int, expectedCount);
+
+    tabModel->addTab(url, title);
+    historyModel->search(searchTerm);
+    waitSignals(countChangeSpy, 2);
+
+    // Wierdly this works in unit test, but in production code doesn't, perhaps linking to different sqlite version
+    // QEXPECT_FAIL("special_upper_case_special_char", "due to sqlite bug accented char is case sensitive with LIKE op", Continue);
+    QCOMPARE(historyModel->rowCount(), expectedCount);
+}
+
 void tst_declarativehistorymodel::cleanupTestCase()
 {
     tabModel->clear();
@@ -235,7 +272,7 @@ int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
     app.setAttribute(Qt::AA_Use96Dpi, true);
-    qmlRegisterType<DeclarativeTabModel>("Sailfish.Browser", 1, 0, "TabModel");
+    qmlRegisterType<PersistentTabModel>("Sailfish.Browser", 1, 0, "PersistentTabModel");
     qmlRegisterType<DeclarativeHistoryModel>("Sailfish.Browser", 1, 0, "HistoryModel");
     tst_declarativehistorymodel testcase;
     return QTest::qExec(&testcase, argc, argv); \

@@ -11,9 +11,17 @@
 
 #include "bookmark.h"
 
-Bookmark::Bookmark(QString title, QString url, QString favicon, QObject* parent) :
-    QObject(parent), m_title(title), m_url(url), m_favicon(favicon)
+Bookmark::Bookmark(QString title, QString url, QString favicon, bool hasTouchIcon, QObject* parent)
+    : QObject(parent)
+    , m_title(title)
+    , m_url(url)
+    , m_favicon(favicon)
+    , m_hasTouchIcon(hasTouchIcon)
 {
+    if (m_favicon.isEmpty()) {
+        m_favicon = DEFAULT_DESKTOP_BOOKMARK_ICON;
+        m_hasTouchIcon = true;
+    }
 }
 
 QString Bookmark::title() const {
@@ -47,4 +55,14 @@ void Bookmark::setFavicon(QString favicon) {
         m_favicon = favicon;
         emit faviconChanged();
     }
+}
+
+bool Bookmark::hasTouchIcon() const
+{
+    return m_hasTouchIcon;
+}
+
+void Bookmark::setHasTouchIcon(bool hasTouchIcon)
+{
+    m_hasTouchIcon = hasTouchIcon;
 }

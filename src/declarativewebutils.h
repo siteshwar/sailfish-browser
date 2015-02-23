@@ -18,6 +18,7 @@
 #include <QVariant>
 #include "browserservice.h"
 #include <QProcess>
+#include <MGConfItem>
 
 class DeclarativeWebUtils : public QObject
 {
@@ -27,6 +28,14 @@ class DeclarativeWebUtils : public QObject
     Q_PROPERTY(QString downloadDir READ downloadDir CONSTANT FINAL)
     Q_PROPERTY(QString picturesDir READ picturesDir CONSTANT FINAL)
     Q_PROPERTY(bool firstUseDone READ firstUseDone WRITE setFirstUseDone NOTIFY firstUseDoneChanged)
+    Q_PROPERTY(bool debugMode READ debugMode CONSTANT FINAL)
+    Q_PROPERTY(qreal cssPixelRatio READ cssPixelRatio NOTIFY cssPixelRatioChanged)
+    Q_PROPERTY(qreal silicaPixelRatio READ silicaPixelRatio WRITE setSilicaPixelRatio NOTIFY silicaPixelRatioChanged)
+    Q_PROPERTY(qreal touchSideRadius READ touchSideRadius WRITE setTouchSideRadius NOTIFY touchSideRadiusChanged)
+    Q_PROPERTY(qreal touchTopRadius READ touchTopRadius WRITE setTouchTopRadius NOTIFY touchTopRadiusChanged)
+    Q_PROPERTY(qreal touchBottomRadius READ touchBottomRadius WRITE setTouchBottomRadius NOTIFY touchBottomRadiusChanged)
+    Q_PROPERTY(qreal inputItemSize READ inputItemSize WRITE setInputItemSize NOTIFY inputItemSizeChanged)
+    Q_PROPERTY(qreal zoomMargin READ zoomMargin WRITE setZoomMargin NOTIFY zoomMarginChanged)
 
 public:
     static DeclarativeWebUtils *instance();
@@ -35,8 +44,21 @@ public:
     QString picturesDir() const;
     bool firstUseDone() const;
     void setFirstUseDone(bool firstUseDone);
+    bool debugMode() const;
+    qreal cssPixelRatio() const;
+    qreal silicaPixelRatio() const;
+    void setSilicaPixelRatio(qreal silicaPixelRatio);
+    qreal touchSideRadius() const;
+    void setTouchSideRadius(qreal touchSideRadius);
+    qreal touchTopRadius() const;
+    void setTouchTopRadius(qreal touchTopRadius);
+    qreal touchBottomRadius() const;
+    void setTouchBottomRadius(qreal touchBottomRadius);
+    qreal inputItemSize() const;
+    void setInputItemSize(qreal inputItemSize);
+    qreal zoomMargin() const;
+    void setZoomMargin(qreal zoomMargin);
 
-    Q_INVOKABLE QUrl getFaviconForUrl(QUrl url);
     Q_INVOKABLE int getLightness(QColor color) const;
     Q_INVOKABLE bool fileExists(QString fileName) const;
     Q_INVOKABLE QString displayableUrl(QString fullUrl) const;
@@ -44,11 +66,22 @@ public:
 public slots:
     QString homePage() const;
     void clearStartupCacheIfNeeded();
+    void handleDumpMemoryInfoRequest(QString fileName);
 
 signals:
     void homePageChanged();
     void openUrlRequested(QString url);
+    void activateNewTabViewRequested();
     void firstUseDoneChanged();
+    void dumpMemoryInfo(QString fileName);
+    void beforeShutdown();
+    void cssPixelRatioChanged();
+    void silicaPixelRatioChanged();
+    void touchSideRadiusChanged();
+    void touchTopRadiusChanged();
+    void touchBottomRadiusChanged();
+    void inputItemSizeChanged();
+    void zoomMarginChanged();
 
 private slots:
     void updateWebEngineSettings();
@@ -57,8 +90,16 @@ private slots:
 private:
     explicit DeclarativeWebUtils();
     ~DeclarativeWebUtils();
+    void setContentScaling();
 
-    QString m_homePage;
+    MGConfItem m_homePage;
     bool m_firstUseDone;
+    bool m_debugMode;
+    qreal m_silicaPixelRatio;
+    qreal m_touchSideRadius;
+    qreal m_touchTopRadius;
+    qreal m_touchBottomRadius;
+    qreal m_inputItemSize;
+    qreal m_zoomMargin;
 };
 #endif // DECLARATIVEWEBUTILS_H

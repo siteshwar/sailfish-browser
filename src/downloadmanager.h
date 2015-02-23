@@ -27,8 +27,10 @@ public:
     static DownloadManager *instance();
 
     bool existActiveTransfers();
+    bool initialized();
 
 signals:
+    void initializedChanged();
     void downloadStarted();
     void allTransfersCompleted();
 
@@ -52,6 +54,8 @@ private:
     };
 
     void checkAllTransfers();
+    QString aptoideApk(QString packageName);
+    bool moveMyAppPackage(QString path);
 
     // TODO: unlike Gecko downloads and Sailfish transfers these mappings
     //       are not persistent -> after user has browser closed transfers can't be
@@ -61,6 +65,7 @@ private:
     QHash<qulonglong, Status> m_statusCache;
 
     TransferEngineInterface *m_transferClient;
+    bool m_initialized;
 };
 
 #endif

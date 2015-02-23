@@ -25,13 +25,17 @@ public:
 
 public slots:
     void openUrl(QStringList args);
+    void activateNewTabView();
     void cancelTransfer(int transferId);
     void restartTransfer(int transferId);
+    void dumpMemoryInfo(QString fileName);
 
 signals:
     void openUrlRequested(QString url);
+    void activateNewTabViewRequested();
     void cancelTransferRequested(int transferId);
     void restartTransferRequested(int transferId);
+    void dumpMemoryInfoRequested(QString fileName);
 
 private:
     bool m_registered;

@@ -28,9 +28,12 @@ ApplicationWindow {
         WebView {
             id: webView
 
-            active: true
-            toolbarHeight: 50
             portrait: true
+            toolbarHeight: 0
+            fullscreenHeight: Screen.height
+            width: parent.width
+            height: parent.height
+            privateMode: false
 
             HistoryModel {
                 id: historyModel

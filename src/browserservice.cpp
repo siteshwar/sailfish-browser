@@ -46,6 +46,11 @@ void BrowserService::openUrl(QStringList args)
     }
 }
 
+void BrowserService::activateNewTabView()
+{
+    emit activateNewTabViewRequested();
+}
+
 void BrowserService::cancelTransfer(int transferId)
 {
     emit cancelTransferRequested(transferId);
@@ -54,4 +59,9 @@ void BrowserService::cancelTransfer(int transferId)
 void BrowserService::restartTransfer(int transferId)
 {
     emit restartTransferRequested(transferId);
+}
+
+void BrowserService::dumpMemoryInfo(QString fileName)
+{
+    emit dumpMemoryInfoRequested(fileName);
 }

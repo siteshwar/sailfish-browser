@@ -1,17 +1,17 @@
 Name:       sailfish-browser
 
 Summary:    Sailfish Browser
-Version:    0.9.21
+Version:    1.2.1
 Release:    1
 Group:      Applications/Internet
 License:    MPLv2
-Url:        https://bitbucket.org/jolla/ui-sailfish-browser
+Url:        https://github.com/sailfishos/sailfish-browser
 Source0:    %{name}-%{version}.tar.bz2
 BuildRequires:  pkgconfig(Qt5Core)
 BuildRequires:  pkgconfig(Qt5Qml)
 BuildRequires:  pkgconfig(Qt5Gui)
 BuildRequires:  pkgconfig(Qt5Quick)
-BuildRequires:  pkgconfig(qt5embedwidget) >= 1.8.9
+BuildRequires:  pkgconfig(qt5embedwidget) >= 1.9.4
 BuildRequires:  pkgconfig(Qt5DBus)
 BuildRequires:  pkgconfig(Qt5Concurrent)
 BuildRequires:  pkgconfig(Qt5Sql)
@@ -21,20 +21,25 @@ BuildRequires:  pkgconfig(qdeclarative5-boostable)
 BuildRequires:  qt5-qttools
 BuildRequires:  qt5-qttools-linguist
 BuildRequires:  gdb
+BuildRequires:  oneshot
+
 Requires: sailfishsilica-qt5 >= 0.11.8
-Requires: jolla-ambient >= 0.3.24
+Requires: jolla-ambient >= 0.4.18
 Requires: xulrunner-qt5 >= 29.0.1.9
-Requires: embedlite-components-qt5 >= 1.5.5
+Requires: embedlite-components-qt5 >= 1.6.4
 Requires: sailfish-browser-settings = %{version}
 Requires: qt5-plugin-imageformat-ico
 Requires: qt5-plugin-imageformat-gif
 Requires: qt5-plugin-position-geoclue
-Requires: mapplauncherd-booster-silica-qt5
+Requires: mapplauncherd-booster-browser
 Requires: desktop-file-utils
 Requires: qt5-qtgraphicaleffects
 Requires: nemo-qml-plugin-contextkit-qt5
 Requires: nemo-qml-plugin-connectivity
+Requires: nemo-qml-plugin-policy-qt5 >= 0.0.4
 Requires: sailfish-components-media-qt5
+
+%{_oneshot_requires_post}
 
 %description
 Sailfish Web Browser
@@ -81,7 +86,7 @@ Unit tests and additional data needed for functional tests
 
 %qmake5
 
-make %{?jobs:-j%jobs}
+make %{_smp_mflags}
 
 # >> build post
 # << build post
@@ -91,6 +96,7 @@ rm -rf %{buildroot}
 # >> install pre
 # << install pre
 %qmake5_install
+chmod +x %{buildroot}/%{_oneshotdir}/*
 
 # >> install post
 # << install post
@@ -98,6 +104,11 @@ rm -rf %{buildroot}
 %post
 # >> post
 /usr/bin/update-desktop-database -q
+
+# Upgrade, count is 2 or higher (depending on the number of versions installed)
+if [ "$1" -ge 2 ]; then
+%{_bindir}/add-oneshot --user --now cleanup-browser-startup-cache
+fi
 # << post
 
 %files
@@ -109,6 +120,7 @@ rm -rf %{buildroot}
 %{_datadir}/%{name}/*
 %{_datadir}/translations/sailfish-browser_eng_en.qm
 %{_datadir}/dbus-1/services/*.service
+%{_oneshotdir}/cleanup-browser-startup-cache
 # << files
 
 %files settings

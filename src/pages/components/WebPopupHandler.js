@@ -11,6 +11,7 @@
 
 .pragma library
 .import QtQuick 2.1 as QtQuick
+.import Sailfish.Browser 1.0 as Browser
 
 var webView
 var popups
@@ -21,6 +22,7 @@ var resourceController
 var tabModel
 // TODO: WebUtils context property. Should be singleton.
 var WebUtils
+var pickerCreator
 
 // TODO: Handle these per QmlMozView (map of webviews + accepted/rejectedGeolocationUrl)
 var acceptedGeolocationUrl = ""
@@ -29,12 +31,12 @@ var rejectedGeolocationUrl = ""
 var _authenticationComponentUrl = Qt.resolvedUrl("AuthDialog.qml")
 var _passwordManagerComponentUrl = Qt.resolvedUrl("PasswordManagerDialog.qml")
 var _contextMenuComponentUrl = Qt.resolvedUrl("BrowserContextMenu.qml")
-var _selectComponentUrl = Qt.resolvedUrl("SelectDialog.qml")
+var _multiSelectComponent = Qt.resolvedUrl("MultiSelectDialog.qml")
+var _singleSelectComponentUrl = Qt.resolvedUrl("SingleSelectPage.qml")
 var _locationComponentUrl = Qt.resolvedUrl("LocationDialog.qml")
 var _alertComponentUrl = Qt.resolvedUrl("AlertDialog.qml")
 var _confirmComponentUrl = Qt.resolvedUrl("ConfirmDialog.qml")
 var _queryComponentUrl = Qt.resolvedUrl("PromptDialog.qml")
-var _uploadFilePickerComponentUrl = Qt.resolvedUrl("UploadFilePicker.qml")
 
 
 // Singleton
@@ -85,7 +87,8 @@ function openAuthDialog(input) {
                                     {
                                         "hostname": data.text,
                                         "realm": data.title,
-                                        "username": data.defaultValue,
+                                        "username": data.storedUsername,
+                                        "password": data.storedPassword,
                                         "passwordOnly": data.passwordOnly
                                     })
         dialog.accepted.connect(function () {
@@ -94,7 +97,8 @@ function openAuthDialog(input) {
                                                "winid": winid,
                                                "accepted": true,
                                                "username": dialog.username,
-                                               "password": dialog.password
+                                               "password": dialog.password,
+                                               "dontsave": dialog.dontsave
                                            })
         })
         dialog.rejected.connect(function() {
@@ -105,12 +109,19 @@ function openAuthDialog(input) {
 }
 
 function openSelectDialog(data) {
-    var dialog = pageStack.push(_selectComponentUrl,
-                                {
-                                    "options": data.options,
-                                    "multiple": data.multiple,
-                                    "webview": webView.contentItem
-                                })
+    if (data.multiple) {
+        pageStack.push(_multiSelectComponent,
+                        {
+                            "options": data.options,
+                            "webview": webView.contentItem
+                        })
+    } else {
+        pageStack.push(_singleSelectComponentUrl,
+                        {
+                            "options": data.options,
+                            "webview": webView.contentItem
+                        })
+    }
 }
 
 function openPasswordManagerDialog(data) {
@@ -126,7 +137,7 @@ function openPasswordManagerDialog(data) {
 function openContextMenu(data) {
     // Possible path that leads to a new tab. Thus, capturing current
     // view before opening context menu.
-    webView.captureScreen()
+    webView.grabActivePage()
     webView.contentItem.contextMenuRequested(data)
     if (data.types.indexOf("image") !== -1 || data.types.indexOf("link") !== -1) {
         var linkHref = data.linkURL
@@ -150,7 +161,8 @@ function openContextMenu(data) {
                                                             "contentType": contentType,
                                                             "tabModel": tabModel,
                                                             "viewId": webView.contentItem.uniqueID(),
-                                                            "pageStack": pageStack
+                                                            "pageStack": pageStack,
+                                                            "webView": webView
                                                         })
                 _hideVirtualKeyboard()
 
@@ -242,14 +254,14 @@ function openPrompt(data) {
 }
 
 function openFilePicker(data) {
-    if (data.mode !== 0) {
-        console.log("Gecko file picker requested unsupported mode")
-        return
+    if (data.mode == Browser.FileUploadMode.Open || data.mode == Browser.FileUploadMode.OpenMultiple ) {
+        pickerCreator.createObject(pageStack, {
+                                       "pageStack": pageStack,
+                                       "winid": data.winid,
+                                       "webView": webView,
+                                       "filter": data.filter,
+                                       "mode": data.mode});
+    } else {
+        console.log("Gecko file picker requested unsupported mode" + data.mode)
     }
-
-    pageStack.push(_uploadFilePickerComponentUrl,
-                   {
-                       "winid": data.winid,
-                       "webView": webView.contentItem
-                   })
 }

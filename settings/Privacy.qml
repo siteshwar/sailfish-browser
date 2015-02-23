@@ -18,7 +18,8 @@ Page {
     property bool clearPrivateData: clearHistory.checked &&
                                     clearCookies.checked &&
                                     clearSavedPasswords.checked &&
-                                    clearCache.checked
+                                    clearCache.checked &&
+                                    clearBookmarks.checked
 
     RemorsePopup {
         id: clearDataRemorse
@@ -38,7 +39,20 @@ Page {
                 title: qsTrId("settings_browser-ph-privacy")
             }
 
-            // Add do not track switch here.
+            TextSwitch {
+                id: doNotTrack
+
+                checked: doNotTrackConfig.value
+
+                //: Tell sites that I do not want to be tracked.
+                //% "Do not track"
+                text: qsTrId("settings_browser-la-tracking")
+                //: Tell sites that I do not want to be tracked.
+                //% "Tell sites that I do not want to be tracked"
+                description: qsTrId("settings_browser-la-tracking_description")
+
+                onCheckedChanged: doNotTrackConfig.value = checked
+            }
 
             SectionHeader {
                 //: Clear private data section header
@@ -79,6 +93,13 @@ Page {
                 checked: true
             }
 
+            TextSwitch {
+                id: clearBookmarks
+                //% "Favorites"
+                text: qsTrId("settings_browser-la-clear_favorites")
+                checked: true
+            }
+
             // Spacer between Button and switches
             Item {
                 width: parent.width
@@ -111,12 +132,22 @@ Page {
                                                      if (clearCache.checked) {
                                                          clearCacheConfig.value = true
                                                      }
+                                                     if (clearBookmarks.checked) {
+                                                         clearBookmarksConfig.value = true
+                                                     }
                                                  }
                                              }
                     );
                 }
             }
         }
+    }
+
+    ConfigurationValue {
+        id: doNotTrackConfig
+
+        key: "/apps/sailfish-browser/settings/do_not_track"
+        defaultValue: false
     }
 
     ConfigurationValue {
@@ -153,4 +184,12 @@ Page {
         key: "/apps/sailfish-browser/actions/clear_cache"
         defaultValue: false
     }
+
+    ConfigurationValue {
+        id: clearBookmarksConfig
+
+        key: "/apps/sailfish-browser/actions/clear_bookmarks"
+        defaultValue: false
+    }
+
 }

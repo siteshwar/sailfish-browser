@@ -78,6 +78,11 @@ int DBManager::createLink(int tabId, QString url, QString title)
     QMetaObject::invokeMethod(worker, "createLink", Qt::BlockingQueuedConnection,
                               Q_RETURN_ARG(int, linkId), Q_ARG(int, tabId),
                               Q_ARG(QString, url), Q_ARG(QString, title));
+
+    if (linkId == m_nextLinkId) {
+        ++m_nextLinkId;
+    }
+
     return linkId;
 }
 
@@ -130,10 +135,10 @@ void DBManager::removeAllTabs()
     QMetaObject::invokeMethod(worker, "removeAllTabs", Qt::QueuedConnection);
 }
 
-void DBManager::updateTitle(int tabId, int linkId, QString title)
+void DBManager::updateTitle(int tabId, int linkId, QString url, QString title)
 {
     QMetaObject::invokeMethod(worker, "updateTitle", Qt::QueuedConnection,
-                              Q_ARG(int, tabId), Q_ARG(int, linkId), Q_ARG(QString, title));
+                              Q_ARG(int, tabId), Q_ARG(int, linkId), Q_ARG(QString, url), Q_ARG(QString, title));
 }
 
 void DBManager::updateThumbPath(int tabId, QString path)
@@ -167,7 +172,7 @@ void DBManager::saveSetting(QString name, QString value)
 {
     m_settings.insert(name, value);
     emit settingsChanged();
-    QMetaObject::invokeMethod(worker, "saveSetting", Qt::QueuedConnection,
+    QMetaObject::invokeMethod(worker, "saveSetting", Qt::BlockingQueuedConnection,
                               Q_ARG(QString, name), Q_ARG(QString, value));
 }
 
@@ -185,7 +190,7 @@ void DBManager::deleteSetting(QString name)
     if (m_settings.contains(name)) {
         m_settings.remove(name);
         emit settingsChanged();
-        QMetaObject::invokeMethod(worker, "deleteSetting", Qt::QueuedConnection,
+        QMetaObject::invokeMethod(worker, "deleteSetting", Qt::BlockingQueuedConnection,
                                   Q_ARG(QString, name));
     }
 }

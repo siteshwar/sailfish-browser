@@ -20,16 +20,61 @@
 #include <QDir>
 #include <QDateTime>
 #include <QStandardPaths>
+#include <QXmlStreamReader>
 #include "declarativewebutils.h"
 #include "qmozcontext.h"
 
-static const QString system_components_time_stamp("/var/lib/_MOZEMBED_CACHE_CLEAN_");
-static const QString profilePath("/.mozilla/mozembed");
+static const QString gSystemComponentsTimeStamp("/var/lib/_MOZEMBED_CACHE_CLEAN_");
+static const QString gProfilePath("/.mozilla/mozembed");
+static const QString gOpenSearchPath("/usr/lib/mozembedlite/chrome/embedlite/content/");
 static DeclarativeWebUtils *gSingleton = 0;
+static const qreal gCssPixelRatioRoundingFactor = 0.5;
+static const qreal gCssDefaultPixelRatio = 1.5;
 
-DeclarativeWebUtils::DeclarativeWebUtils() :
-    QObject(),
-    m_homePage("http://www.jolla.com")
+typedef QMap<QString, QString> StringMap;
+
+const StringMap getAvailableOpenSearchConfigs()
+{
+    StringMap configs;
+    QDir configDir(gOpenSearchPath);
+    configDir.setSorting(QDir::Name);
+
+    foreach (QString fileName, configDir.entryList(QStringList("*.xml"))) {
+        QFile xmlFile(gOpenSearchPath + fileName);
+        xmlFile.open(QIODevice::ReadOnly | QIODevice::Text);
+        QXmlStreamReader xml(&xmlFile);
+        QString searchEngine;
+
+        while (!xml.atEnd()) {
+            xml.readNext();
+            if (xml.isStartElement() && xml.name() == "ShortName") {
+                xml.readNext();
+                if (xml.isCharacters()) {
+                    searchEngine = xml.text().toString();
+                }
+            }
+        }
+
+        if (!xml.hasError()) {
+            configs.insert(searchEngine, fileName);
+        }
+
+        xmlFile.close();
+    }
+
+    return configs;
+}
+
+DeclarativeWebUtils::DeclarativeWebUtils()
+    : QObject()
+    , m_homePage("/apps/sailfish-browser/settings/home_page", this)
+    , m_debugMode(qApp->arguments().contains("-debugMode"))
+    , m_silicaPixelRatio(1.0)
+    , m_touchSideRadius(32.0)
+    , m_touchTopRadius(48.0)
+    , m_touchBottomRadius(16.0)
+    , m_inputItemSize(28.0)
+    , m_zoomMargin(14.0)
 {
     connect(QMozContext::GetInstance(), SIGNAL(onInitialized()),
             this, SLOT(updateWebEngineSettings()));
@@ -38,18 +83,13 @@ DeclarativeWebUtils::DeclarativeWebUtils() :
 
     QString path = QStandardPaths::writableLocation(QStandardPaths::DataLocation) + QStringLiteral("/.firstUseDone");
     m_firstUseDone = fileExists(path);
+
+    connect(&m_homePage, SIGNAL(valueChanged()), this, SIGNAL(homePageChanged()));
 }
 
 DeclarativeWebUtils::~DeclarativeWebUtils()
 {
     gSingleton = 0;
-}
-
-QUrl DeclarativeWebUtils::getFaviconForUrl(QUrl url)
-{
-    QUrl faviconUrl(url);
-    faviconUrl.setPath("/favicon.ico");
-    return faviconUrl;
 }
 
 int DeclarativeWebUtils::getLightness(QColor color) const
@@ -65,9 +105,9 @@ bool DeclarativeWebUtils::fileExists(QString fileName) const
 
 void DeclarativeWebUtils::clearStartupCacheIfNeeded()
 {
-    QFileInfo systemStamp(system_components_time_stamp);
+    QFileInfo systemStamp(gSystemComponentsTimeStamp);
     if (systemStamp.exists()) {
-        QString mostProfilePath = QDir::homePath() + profilePath;
+        QString mostProfilePath = QDir::homePath() + gProfilePath;
         QString localStampString(mostProfilePath + QString("/_CACHE_CLEAN_"));
         QFileInfo localStamp(localStampString);
         if (localStamp.exists() && systemStamp.lastModified() > localStamp.lastModified()) {
@@ -75,6 +115,13 @@ void DeclarativeWebUtils::clearStartupCacheIfNeeded()
             cacheDir.removeRecursively();
             QFile(localStampString).remove();
         }
+    }
+}
+
+void DeclarativeWebUtils::handleDumpMemoryInfoRequest(QString fileName)
+{
+    if (m_debugMode) {
+        emit dumpMemoryInfo(fileName);
     }
 }
 
@@ -93,10 +140,10 @@ void DeclarativeWebUtils::updateWebEngineSettings()
     mozContext->setPref(QString("intl.accept_languages"), QVariant(langs));
 
     // these are magic numbers defining touch radius required to detect <image src=""> touch
-    mozContext->setPref(QString("browser.ui.touch.left"), QVariant(32));
-    mozContext->setPref(QString("browser.ui.touch.right"), QVariant(32));
-    mozContext->setPref(QString("browser.ui.touch.top"), QVariant(48));
-    mozContext->setPref(QString("browser.ui.touch.bottom"), QVariant(16));
+    mozContext->setPref(QStringLiteral("browser.ui.touch.left"), QVariant(m_touchSideRadius));
+    mozContext->setPref(QStringLiteral("browser.ui.touch.right"), QVariant(m_touchSideRadius));
+    mozContext->setPref(QStringLiteral("browser.ui.touch.top"), QVariant(m_touchTopRadius));
+    mozContext->setPref(QStringLiteral("browser.ui.touch.bottom"), QVariant(m_touchBottomRadius));
 
     // Install embedlite handlers for guestures
     mozContext->setPref(QString("embedlite.azpc.handle.singletap"), QVariant(false));
@@ -135,22 +182,37 @@ void DeclarativeWebUtils::updateWebEngineSettings()
     // Don't force 16bit color depth
     mozContext->setPref(QString("gfx.qt.rgb16.force"), QVariant(false));
 
+    mozContext->setPref(QString("media.resource_handler_disabled"), QVariant(true));
+
+    // Disable asmjs
+    mozContext->setPref(QString("javascript.options.asmjs"), QVariant(false));
+
     // subscribe to gecko messages
     mozContext->addObservers(QStringList()
                              << "clipboard:setdata"
                              << "media-decoder-info"
                              << "embed:download"
-                             << "embed:search");
+                             << "embed:allprefs"
+                             << "embed:search"
+                             << "download-manager-initialized");
 
     // Enable internet search
     mozContext->setPref(QString("keyword.enabled"), QVariant(true));
 
     // Scale up content size
-    mozContext->setPixelRatio(1.5);
+    setContentScaling();
 
     // Theme.fontSizeSmall
-    mozContext->setPref(QString("embedlite.inputItemSize"), QVariant(28));
-    mozContext->setPref(QString("embedlite.zoomMargin"), QVariant(14));
+    mozContext->setPref(QStringLiteral("embedlite.inputItemSize"), QVariant(m_inputItemSize));
+    mozContext->setPref(QStringLiteral("embedlite.zoomMargin"), QVariant(m_zoomMargin));
+
+    // Memory management related preferences.
+    // We're sending "memory-pressure" when browser is on background (cover by another application)
+    // and when the browser page is inactivated.
+    mozContext->setPref(QString("javascript.options.gc_on_memory_pressure"), QVariant(true));
+
+    // Disable SSLv3
+    mozContext->setPref(QString("security.tls.version.min"), QVariant(1));
 }
 
 void DeclarativeWebUtils::setFirstUseDone(bool firstUseDone) {
@@ -168,13 +230,129 @@ void DeclarativeWebUtils::setFirstUseDone(bool firstUseDone) {
     }
 }
 
+bool DeclarativeWebUtils::debugMode() const
+{
+    return m_debugMode;
+}
+
+qreal DeclarativeWebUtils::cssPixelRatio() const
+{
+    QMozContext* mozContext = QMozContext::GetInstance();
+    if (mozContext) {
+        return mozContext->pixelRatio();
+    }
+    return 1.0;
+}
+
 bool DeclarativeWebUtils::firstUseDone() const {
     return m_firstUseDone;
 }
 
+qreal DeclarativeWebUtils::silicaPixelRatio() const
+{
+    return m_silicaPixelRatio;
+}
+
+void DeclarativeWebUtils::setSilicaPixelRatio(qreal silicaPixelRatio)
+{
+    if (m_silicaPixelRatio != silicaPixelRatio) {
+        m_silicaPixelRatio = silicaPixelRatio;
+        if (QMozContext::GetInstance()->initialized()) {
+            setContentScaling();
+        }
+        emit silicaPixelRatioChanged();
+    }
+}
+
+qreal DeclarativeWebUtils::touchSideRadius() const
+{
+    return m_touchSideRadius;
+}
+
+void DeclarativeWebUtils::setTouchSideRadius(qreal touchSideRadius)
+{
+    if (m_touchSideRadius != touchSideRadius) {
+        m_touchSideRadius = touchSideRadius;
+        QMozContext* mozContext = QMozContext::GetInstance();
+        if (mozContext->initialized()) {
+            mozContext->setPref(QStringLiteral("browser.ui.touch.left"), QVariant(m_touchSideRadius));
+            mozContext->setPref(QStringLiteral("browser.ui.touch.right"), QVariant(m_touchSideRadius));
+        }
+        emit touchSideRadiusChanged();
+    }
+}
+
+qreal DeclarativeWebUtils::touchTopRadius() const
+{
+    return m_touchTopRadius;
+}
+
+void DeclarativeWebUtils::setTouchTopRadius(qreal touchTopRadius)
+{
+    if (m_touchTopRadius != touchTopRadius) {
+        m_touchTopRadius = touchTopRadius;
+        QMozContext* mozContext = QMozContext::GetInstance();
+        if (mozContext->initialized()) {
+            mozContext->setPref(QStringLiteral("browser.ui.touch.top"), QVariant(m_touchTopRadius));
+        }
+        emit touchTopRadiusChanged();
+    }
+}
+
+qreal DeclarativeWebUtils::touchBottomRadius() const
+{
+    return m_touchBottomRadius;
+}
+
+void DeclarativeWebUtils::setTouchBottomRadius(qreal touchBottomRadius)
+{
+    if (m_touchBottomRadius != touchBottomRadius) {
+        m_touchBottomRadius = touchBottomRadius;
+        QMozContext* mozContext = QMozContext::GetInstance();
+        if (mozContext->initialized()) {
+            mozContext->setPref(QStringLiteral("browser.ui.touch.bottom"), QVariant(m_touchBottomRadius));
+        }
+        emit touchBottomRadiusChanged();
+    }
+}
+
+qreal DeclarativeWebUtils::inputItemSize() const
+{
+    return m_inputItemSize;
+}
+
+void DeclarativeWebUtils::setInputItemSize(qreal inputItemSize)
+{
+    if (m_inputItemSize != inputItemSize) {
+        m_inputItemSize = inputItemSize;
+        QMozContext* mozContext = QMozContext::GetInstance();
+        if (mozContext->initialized()) {
+            mozContext->setPref(QStringLiteral("embedlite.inputItemSize"), QVariant(m_inputItemSize));
+        }
+        emit inputItemSizeChanged();
+    }
+}
+
+qreal DeclarativeWebUtils::zoomMargin() const
+{
+    return m_zoomMargin;
+}
+
+void DeclarativeWebUtils::setZoomMargin(qreal zoomMargin)
+{
+    if (m_zoomMargin != zoomMargin) {
+        m_zoomMargin = zoomMargin;
+        QMozContext* mozContext = QMozContext::GetInstance();
+        if (mozContext->initialized()) {
+            mozContext->setPref(QStringLiteral("embedlite.zoomMargin"), QVariant(m_zoomMargin));
+        }
+        emit zoomMarginChanged();
+    }
+}
+
 QString DeclarativeWebUtils::homePage() const
 {
-    return m_homePage;
+    return m_homePage.value("http://jolla.com").value<QString>();
 }
 
 DeclarativeWebUtils *DeclarativeWebUtils::instance()
@@ -220,20 +398,43 @@ void DeclarativeWebUtils::handleObserve(const QString message, const QVariant da
     } else if (message == "embed:search") {
         QString msg = dataMap.value("msg").toString();
         if (msg == "init") {
-            if (!dataMap.value("defaultEngine").isValid()) {
-                QMozContext *mozContext = QMozContext::GetInstance();
-                QVariantMap loadsearch;
+            const StringMap configs(getAvailableOpenSearchConfigs());
+            QStringList registeredSearches(dataMap.value("engines").toStringList());
+            QMozContext *mozContext = QMozContext::GetInstance();
 
-                // load opensearch descriptions
-                loadsearch.insert(QString("msg"), QVariant(QString("loadxml")));
-                loadsearch.insert(QString("uri"), QVariant(QString("chrome://embedlite/content/google.xml")));
-                loadsearch.insert(QString("confirm"), QVariant(false));
-                mozContext->sendObserve("embedui:search", QVariant(loadsearch));
-                loadsearch.insert(QString("uri"), QVariant(QString("chrome://embedlite/content/bing.xml")));
-                mozContext->sendObserve("embedui:search", QVariant(loadsearch));
-                loadsearch.insert(QString("uri"), QVariant(QString("chrome://embedlite/content/yahoo.xml")));
-                mozContext->sendObserve("embedui:search", QVariant(loadsearch));
+            // Add newly installed configs
+            foreach (QString searchName, configs.keys()) {
+                if (registeredSearches.contains(searchName)) {
+                    registeredSearches.removeAll(searchName);
+                } else {
+                    QVariantMap loadsearch;
+
+                    // load opensearch descriptions
+                    loadsearch.insert(QString("msg"), QVariant(QString("loadxml")));
+                    loadsearch.insert(QString("uri"), QVariant(QString("chrome://embedlite/content/") +
+                                                               configs.value(searchName)));
+                    loadsearch.insert(QString("confirm"), QVariant(false));
+                    mozContext->sendObserve("embedui:search", QVariant(loadsearch));
+                }
+            }
+
+            // Remove uninstalled OpenSearch configs
+            foreach(QString searchName, registeredSearches) {
+                QVariantMap removeMsg;
+                removeMsg.insert(QString("msg"), QVariant(QString("remove")));
+                removeMsg.insert(QString("name"), QVariant(searchName));
+                mozContext->sendObserve("embedui:search", QVariant(removeMsg));
             }
         }
     }
+}
+
+void DeclarativeWebUtils::setContentScaling()
+{
+    QMozContext* mozContext = QMozContext::GetInstance();
+    qreal mozCssPixelRatio = gCssDefaultPixelRatio * m_silicaPixelRatio;
+    // Round to nearest even rounding factor
+    mozCssPixelRatio = qRound(mozCssPixelRatio / gCssPixelRatioRoundingFactor) * gCssPixelRatioRoundingFactor;
+    mozContext->setPixelRatio(mozCssPixelRatio);
+    emit cssPixelRatioChanged();
 }

@@ -13,7 +13,7 @@ isEmpty(USE_RESOURCES) {
   DEPLOYMENT_PATH = /usr/share/$$TARGET
   # QML files and folders
   qml.path = $$DEPLOYMENT_PATH
-  qml.files = *.qml pages
+  qml.files = *.qml pages cover
 
 
   DEFINES += DEPLOYMENT_PATH=\"\\\"\"$${DEPLOYMENT_PATH}/\"\\\"\"
@@ -34,6 +34,11 @@ packagesExist(qdeclarative5-boostable) {
     warning("qdeclarative5-boostable not available; startup times will be slower")
 }
 
+packagesExist(sailfishsilica) {
+    DEFINES += SCALABLE_UI
+    PKGCONFIG += sailfishsilica
+}
+
 # Include qtmozembed
 isEmpty(QTEMBED_LIB) {
   PKGCONFIG += qt5embedwidget
@@ -49,12 +54,11 @@ TS_FILE = $$OUT_PWD/sailfish-browser.ts
 EE_QM = $$OUT_PWD/sailfish-browser_eng_en.qm
 include(../translations/translations.pri)
 include(history.pri)
+include(bookmarks.pri)
 
 # C++ sources
 SOURCES += \
     sailfishbrowser.cpp \
-    declarativebookmarkmodel.cpp \
-    bookmark.cpp \
     declarativewebcontainer.cpp \
     declarativewebpage.cpp \
     declarativewebutils.cpp \
@@ -62,14 +66,14 @@ SOURCES += \
     browserservice.cpp \
     dbusadaptor.cpp \
     downloadmanager.cpp \
+    iconfetcher.cpp \
     settingmanager.cpp \
     closeeventfilter.cpp \
+    webpagequeue.cpp \
     webpages.cpp
 
 # C++ headers
 HEADERS += \
-    declarativebookmarkmodel.h \
-    bookmark.h \
     declarativewebcontainer.h \
     declarativewebpage.h \
     declarativewebutils.h \
@@ -77,11 +81,16 @@ HEADERS += \
     browserservice.h \
     dbusadaptor.h \
     downloadmanager.h \
+    iconfetcher.h \
     settingmanager.h \
     closeeventfilter.h \
-    webpages.h
+    webpagequeue.h \
+    webpages.h \
+    declarativefileuploadmode.h \
+    declarativefileuploadfilter.h
 
 OTHER_FILES = *.qml \
+              cover/*.qml \
               pages/*.qml \
               pages/components/*.qml \
               pages/components/*.js \
