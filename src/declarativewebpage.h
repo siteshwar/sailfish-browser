@@ -88,6 +88,7 @@ signals:
 
     void fullscreenHeightChanged();
     void toolbarHeightChanged();
+    void flickingVerticallyChanged();
 
 protected:
     void componentComplete();

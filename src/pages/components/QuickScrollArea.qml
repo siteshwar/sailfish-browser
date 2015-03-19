@@ -38,7 +38,7 @@ import Sailfish.Silica 1.0
 Column {
     id: root
 
-    property Flickable flickable
+    property Item flickable
     property bool flicking
     property bool inBounds: (!flickable.pullDownMenu || !flickable.pullDownMenu.active) && (!flickable.pushUpMenu || !flickable.pushUpMenu.active)
     property bool pressed: scrollUpButton.pressed || scrollDownButton.pressed
@@ -62,6 +62,20 @@ Column {
 
     opacity: active ? 1.0 : 0.0
     Behavior on opacity { FadeAnimation { duration: 400 } }
+
+    /*Timer {
+        interval: 1000
+        running: true; repeat: true
+        onTriggered: {
+            console.log("opacity: " + opacity)
+            console.log("active: " + active)
+            console.log("visible: " + root.visible)
+            console.log("height "+ height)
+            console.log("width "+ width)
+            console.log("x "+ x)
+            console.log("y "+ y)
+        }
+    }*/
 
     Timer {
         id: visibilityTimer

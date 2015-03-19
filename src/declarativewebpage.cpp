@@ -14,6 +14,7 @@
 
 #include <QtConcurrent>
 #include <QStandardPaths>
+#include <qmozscrolldecorator.h>
 
 static const QString gFullScreenMessage("embed:fullscreenchanged");
 static const QString gDomContentLoadedMessage("embed:domcontentloaded");
@@ -71,6 +72,7 @@ DeclarativeWebPage::DeclarativeWebPage(QQuickItem *parent)
     connect(&m_grabWritter, SIGNAL(finished()), this, SLOT(grabWritten()));
     connect(this, SIGNAL(contentHeightChanged()), this, SLOT(resetHeight()));
     connect(this, SIGNAL(scrollableOffsetChanged()), this, SLOT(resetHeight()));
+    connect(verticalScrollDecorator(), SIGNAL(positionChanged()), this, SIGNAL(flickingVerticallyChanged()));
 }
 
 DeclarativeWebPage::~DeclarativeWebPage()

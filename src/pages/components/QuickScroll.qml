@@ -36,7 +36,7 @@ import QtQuick 2.0
 import Sailfish.Silica 1.0
 
 Item {
-    property Flickable flickable
+    property Item flickable
     property bool quickScroll: flickable && (flickable.flickableDirection === Flickable.VerticalFlick || flickable.flickableDirection === Flickable.AutoFlickDirection)
     property bool quickScrollAnimating
     property bool _quickScrollAllowed: _initialised && quickScroll && flickable.height >= Screen.width && flickable.contentHeight > 3.5*flickable.height
@@ -46,10 +46,31 @@ Item {
     property bool _moving: flickable && flickable.moving
     property var _incubator
 
-    Component.onCompleted: _initialised = true
+    Component.onCompleted: {
+        console.log("QUICKSCROLL ALLOWED" + _quickScrollAllowed)
+        _initialised = true
+        console.log("QUICKSCROLL ALLOWED" + _quickScrollAllowed)
+    }
+
+    Timer {
+        interval: 1000
+        running: true; repeat: true
+        onTriggered: {
+            /*console.log("QUICKSCROLL ALLOWED: " + _quickScrollAllowed)
+            console.log(_initialised)
+            console.log(quickScroll)
+            console.log(flickable.height >= Screen.width)
+            console.log(flickable.contentHeight + ":" + 3.5*flickable.height)
+            console.log(flickable.contentHeight > 3.5*flickable.height)*/
+            console.log("quickscroll visible:" + parent.visible)
+        }
+    }
+
     on_QuickScrollAllowedChanged: {
+        console.log("QUICKSCROLL ALLOWED CHANGED" + _quickScrollAllowed)
         if (_quickScrollAllowed) {
             if (!_quickScrollArea && !_incubating) {
+                console.log("Creating quickscroll area ")
                 _incubator = quickScrollAreaComponent.incubateObject(flickable, {"flickable": flickable })
                 if (_incubator.status != Component.Ready) {
                     _incubating = true
@@ -95,4 +116,18 @@ Item {
         id: quickScrollAreaComponent
         QuickScrollArea {}
     }
+
+    Timer {
+        interval: 1000
+        running: true; repeat: true
+        onTriggered: {
+            console.log("QuickScroll opacity: " + opacity)
+            console.log("QuickScroll visible: " + visible)
+            console.log("QuickScroll height "+ height)
+            console.log("QuickScroll width "+ width)
+            console.log("QuickScroll x "+ x)
+            console.log("QuickScroll y "+ y)
+        }
+    }
+
 }
