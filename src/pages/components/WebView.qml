@@ -110,6 +110,20 @@ WebContainer {
             width: container.width
             state: ""
 
+            QuickScrollHandler {
+                id: quickScrollHandler
+                webPage: webView.contentItem
+                //property alias webPage: webView.contentItem
+            }
+
+            QuickScroll {
+                id: quickScroll
+                flickable: quickScrollHandler
+                z: 1
+                //anchors.top: contentItem.top
+                //anchors.right: verticalScrollDecorator.right
+            }
+
             onContentHeightChanged: {
                 console.log(webPage.contentHeight)
                 console.log(quickScroll._initialised && quickScroll.quickScroll && webPage.height >= Screen.width && webPage.contentHeight > 3.5*webPage.height)
@@ -344,20 +358,6 @@ WebContainer {
         visible: contentItem && contentItem.contentWidth > contentItem.width && !contentItem.pinching && !popupActive
         opacity: contentItem && contentItem.horizontalScrollDecorator.moving ? 1.0 : 0.0
         Behavior on opacity { NumberAnimation { properties: "opacity"; duration: 400 } }
-    }
-
-    QuickScrollHandler {
-        id: quickScrollHandler
-        webPage: webView.contentItem
-        //property alias webPage: webView.contentItem
-    }
-
-    QuickScroll {
-        id: quickScroll
-        flickable: quickScrollHandler
-        z: 100
-        //anchors.top: contentItem.top
-        //anchors.right: verticalScrollDecorator.right
     }
 
     ResourceController {

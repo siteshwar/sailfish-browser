@@ -59,7 +59,7 @@ Column {
     width: Theme.itemSizeExtraLarge
     enabled: opacity > 0.0
     anchors.right: parent.right
-
+    //z: 100
     opacity: active ? 1.0 : 0.0
     Behavior on opacity { FadeAnimation { duration: 400 } }
 
@@ -85,6 +85,7 @@ Column {
         target: flickable
         onFlickingVerticallyChanged: flicking = flickable.flickingVertically && Math.abs(flickable.verticalVelocity) > Screen.height
     }
+
     QuickScrollButton {
         id: scrollUpButton
 
