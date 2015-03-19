@@ -31,8 +31,6 @@ Item {
         target: webPage
         onFlickingVerticallyChanged: {
             flickingVerticallyChanged()
-            //webPage.opacity = 0.5
-            console.log("Z IS : " + webPage.z)
         }
     }
 

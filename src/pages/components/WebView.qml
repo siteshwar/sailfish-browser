@@ -16,7 +16,7 @@ import Qt5Mozilla 1.0
 import "WebPopupHandler.js" as PopupHandler
 import "." as Browser
 
-//import Sailfish.Silica.private 1.0
+import Sailfish.Silica.private 1.0
 
 WebContainer {
     id: webView
