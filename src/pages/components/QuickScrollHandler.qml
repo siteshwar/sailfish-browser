@@ -5,7 +5,7 @@ import Sailfish.Browser 1.0
 Item {
     property WebPage webPage
     property int flickableDirection: Flickable.AutoFlickDirection
-    property bool moving: true
+    property bool moving: webPage.moving
     property bool flickingVertically: true
     property int verticalVelocity: 100000
     property bool atYBeginning: false
