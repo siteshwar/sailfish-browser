@@ -31,22 +31,6 @@ Item {
         interval: 1000
         onTriggered: {
             verticalVelocity = Math.abs(webPage.scrollableOffset.y - _scrollStartY)
-            console.log("Velocity is " + verticalVelocity)
-        }
-    }
-
-    Timer {
-        interval: 1000
-        running: true; repeat: true
-        onTriggered: {
-            /*console.log("webPage.verticalScrollDecorator : " + webPage.verticalScrollDecorator.position)*/
-            console.log("webPage.contentHeight : " + webPage.contentHeight)
-            //console.log("webPage.scrollableOffset : " + webPage.scrollableOffset)
-            console.log("webPage.scrollableSize : " + webPage.scrollableSize)
-            console.log("atYBeginning : " + atYBeginning)
-            console.log("atYEnd : " + atYEnd)/*
-            console.log("webPage.contentRect.height : " + webPage.contentRect.height)
-            console.log("webPage.height : " + webPage.height)*/
         }
     }
 
@@ -59,13 +43,6 @@ Item {
        id: pullDownMenu
        property bool active: false
     }
-
-    /*Connections {
-        target: webPage
-        onFlickingVerticallyChanged: {
-            flickingVerticallyChanged()
-        }
-    }*/
 
     function scrollToTop() {
         webPage.sendAsyncMessage("embedui:scrollTo", {"x":webPage.scrollableOffset.x, "y":0})

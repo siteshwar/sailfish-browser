@@ -16,7 +16,7 @@ import Qt5Mozilla 1.0
 import "WebPopupHandler.js" as PopupHandler
 import "." as Browser
 
-//import Sailfish.Silica.private 1.0
+import Sailfish.Silica.private 1.0
 
 WebContainer {
     id: webView
@@ -83,8 +83,6 @@ WebContainer {
             property string iconType
             readonly property bool activeWebPage: container.tabId == tabId
 
-            property int flickableDirection: Flickable.VerticalFlick
-
             fullscreenHeight: container.fullscreenHeight
             toolbarHeight: container.toolbarHeight
 
@@ -113,22 +111,13 @@ WebContainer {
             QuickScrollHandler {
                 id: quickScrollHandler
                 webPage: webView.contentItem
-                //property alias webPage: webView.contentItem
             }
 
             QuickScroll {
                 id: quickScroll
                 flickable: quickScrollHandler
                 z: 1
-                //anchors.top: contentItem.top
-                //anchors.right: verticalScrollDecorator.right
             }
-
-            onContentHeightChanged: {
-                console.log(webPage.contentHeight)
-                console.log(quickScroll._initialised && quickScroll.quickScroll && webPage.height >= Screen.width && webPage.contentHeight > 3.5*webPage.height)
-            }
-            onHeightChanged: console.log(webPage.height)
 
             onClearGrabResult: tabModel.updateThumbnailPath(tabId, "")
             onGrabResult: tabModel.updateThumbnailPath(tabId, fileName)
