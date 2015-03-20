@@ -50,10 +50,10 @@ Item {
     }*/
 
     function scrollToTop() {
-        webPage.sendAsyncMessage("embedui:scrollTo", {"x":0, "y":0})
+        webPage.sendAsyncMessage("embedui:scrollTo", {"x":webPage.scrollableOffset.x, "y":0})
     }
 
     function scrollToBottom() {
-        webPage.sendAsyncMessage("embedui:scrollTo", {"x":0, "y":webPage.contentHeight})
+        webPage.sendAsyncMessage("embedui:scrollTo", {"x":webPage.scrollableOffset.x, "y":webPage.contentHeight})
     }
 }
