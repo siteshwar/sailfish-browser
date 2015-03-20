@@ -7,15 +7,33 @@ Item {
     property int flickableDirection: Flickable.AutoFlickDirection
     property bool moving: webPage.moving
     property bool flickingVertically: webPage.verticalScrollDecorator.moving
-    property int verticalVelocity: 100000
+    property int verticalVelocity: 0
     property bool atYBeginning: webPage.scrollableOffset.y === 0
     property int contentHeight: webPage.contentHeight
     property bool atYEnd: (webPage.scrollableOffset.y + webPage.height) >= webPage.contentHeight
 
-    //signal flickingVerticallyChanged
+    property int _scrollStartY
 
     height: webPage.height
     width: webPage.width
+
+    onFlickingVerticallyChanged: {
+        if (flickingVertically) {
+            if (!scrollTimer.running) {
+                _scrollStartY = webPage.scrollableOffset.y
+                scrollTimer.start()
+            }
+        }
+    }
+
+    Timer {
+        id: scrollTimer
+        interval: 1000
+        onTriggered: {
+            verticalVelocity = Math.abs(webPage.scrollableOffset.y - _scrollStartY)
+            console.log("Velocity is " + verticalVelocity)
+        }
+    }
 
     Timer {
         interval: 1000
