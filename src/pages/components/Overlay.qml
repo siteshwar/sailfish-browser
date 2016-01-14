@@ -115,7 +115,7 @@ Background {
                 searchField.enteringNewTabUrl = false
 
                 if (enteredPage) {
-                    webView.tabModel.newTab(enteredPage.url, enteredPage.title)
+                    webView.tabModel.newTab(enteredPage.url, enteredPage.title, false)
                     enteredPage = null
                 } else if (!toolBar.findInPageActive) {
                     searchField.resetUrl(webView.url)

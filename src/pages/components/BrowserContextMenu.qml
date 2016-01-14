@@ -105,7 +105,7 @@ Rectangle {
 
             onClicked: {
                 root._hide()
-                tabModel.newTab(root.linkHref, root.linkTitle)
+                tabModel.newTab(root.linkHref, root.linkTitle, true)
             }
         }
 
@@ -141,7 +141,7 @@ Rectangle {
 
             onClicked: {
                 root._hide()
-                tabModel.newTab(root.imageSrc, "")
+                tabModel.newTab(root.imageSrc, "", true)
             }
         }
 

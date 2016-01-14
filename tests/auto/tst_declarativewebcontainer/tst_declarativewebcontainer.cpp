@@ -309,7 +309,7 @@ void tst_declarativewebcontainer::activatePage()
     Tab tab;
     tab.setTabId(1);
 
-    bool res = m_webContainer->activatePage(tab, true, 0);
+    bool res = m_webContainer->activatePage(tab, false, true, 0);
     QCOMPARE(res, false);
 }
 

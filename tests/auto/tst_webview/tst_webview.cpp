@@ -165,7 +165,7 @@ void tst_webview::testNewTab()
 
     // Mimic favorite opening to a new tab. Favorites can have both url and title and when entering
     // url through virtual keyboard only url is provided.
-    tabModel->newTab(newUrl, newTitle);
+    tabModel->newTab(newUrl, newTitle, false);
 
     // Wait for MozView instance change.
     waitSignals(contentItemSpy, 1);
@@ -291,7 +291,7 @@ void tst_webview::testCloseActiveTab()
     // Updates contentItem to match index zero.
     Tab tab;
     tab.setTabId(webContainer->tabId());
-    webContainer->activatePage(tab);
+    webContainer->activatePage(tab, false);
     QCOMPARE(activeTabChangedSpy.count(), 1);
     QCOMPARE(tabClosedSpy.count(), 1);
     QList<QVariant> arguments = tabClosedSpy.takeFirst();
@@ -436,7 +436,7 @@ void tst_webview::testLiveTabCount()
     QSignalSpy urlChangedSpy(webContainer, SIGNAL(urlChanged()));
     QSignalSpy titleChangedSpy(webContainer, SIGNAL(titleChanged()));
 
-    tabModel->newTab(newUrl, "");
+    tabModel->newTab(newUrl, "", false);
     waitSignals(loadingChanged, 2);
     waitSignals(urlChangedSpy, 1);
 
@@ -637,7 +637,7 @@ void tst_webview::restart()
 {
     // Title "TestPage"
     QString testPageUrl = formatUrl("testpage.html");
-    tabModel->newTab(testPageUrl, "");
+    tabModel->newTab(testPageUrl, "", false);
     QTest::qWait(5000);
 
     QCOMPARE(tabModel->activeTab().url(), testPageUrl);
@@ -712,7 +712,7 @@ void tst_webview::restart()
 void tst_webview::changeTabAndLoad()
 {
     int previousTab = tabModel->activeTab().tabId();
-    tabModel->newTab(formatUrl("testwindowopen.html"), "");
+    tabModel->newTab(formatUrl("testwindowopen.html"), "", false);
     QTest::qWait(1000);
 
     QList<TestTab> historyOrder;

@@ -320,7 +320,7 @@ Page {
             webView.grabActivePage()
             if (!webView.tabModel.activateTab(url)) {
                 // Open new tab with empty title
-                webView.tabModel.newTab(url, "")
+                webView.tabModel.newTab(url, "", false)
                 overlay.animator.showChrome(true)
             }
             bringToForeground(webView)

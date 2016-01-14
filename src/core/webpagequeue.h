@@ -28,9 +28,11 @@ public :
     bool alive(int tabId) const;
     bool active(int tabId) const;
     DeclarativeWebPage *activate(int tabId);
+    DeclarativeWebPage *webPage(int tabId);
     DeclarativeWebPage *activeWebPage() const;
     void release(int tabId, bool virtualize = false);
     void prepend(int tabId, DeclarativeWebPage *webPage);
+    void append(int tabId, DeclarativeWebPage *webPage);
     void clear();
     int parentTabId(int tabId) const;
 

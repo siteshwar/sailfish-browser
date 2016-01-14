@@ -72,6 +72,13 @@ DeclarativeWebPage *WebPageQueue::activate(int tabId)
     return pageEntry ? pageEntry->webPage : 0;
 }
 
+DeclarativeWebPage *WebPageQueue::webPage(int tabId)
+{
+    int index = -1;
+    WebPageEntry *pageEntry = find(tabId, index);
+    return pageEntry ? pageEntry->webPage : 0;
+}
+
 DeclarativeWebPage *WebPageQueue::activeWebPage() const
 {
     return !m_queue.isEmpty() ? m_queue.at(0)->webPage : 0;;
@@ -134,6 +141,28 @@ void WebPageQueue::prepend(int tabId, DeclarativeWebPage *webPage)
     m_queue.prepend(pageEntry);
     updateLivePages();
     m_livePagePrepended = true;
+}
+
+void WebPageQueue::append(int tabId, DeclarativeWebPage *webPage)
+{
+    int index = -1;
+    WebPageQueue::WebPageEntry *pageEntry = find(tabId, index);
+    if (!pageEntry) {
+        pageEntry = new WebPageEntry(webPage, 0);
+    } else {
+        pageEntry->webPage = webPage;
+        pageEntry->tabId = tabId;
+        pageEntry->parentId = webPage->parentId();
+        pageEntry->uniqueId = webPage->uniqueID();
+        pageEntry->webPage->setResurrectedContentRect(*pageEntry->cssContentRect);
+        if (pageEntry->cssContentRect) {
+            delete pageEntry->cssContentRect;
+            pageEntry->cssContentRect = 0;
+        }
+        m_queue.removeAt(index);
+    }
+
+    m_queue.append(pageEntry);
 }
 
 void WebPageQueue::clear()

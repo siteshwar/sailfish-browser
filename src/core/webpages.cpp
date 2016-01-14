@@ -132,13 +132,15 @@ bool WebPages::alive(int tabId) const
     return m_activePages.alive(tabId);
 }
 
-WebPageActivationData WebPages::page(const Tab& tab, int parentId)
+WebPageActivationData WebPages::page(const Tab& tab, bool backgroundTab, int parentId)
 {
     const int tabId = tab.tabId();
 
     if (m_activePages.active(tabId)) {
         DeclarativeWebPage *activePage = m_activePages.activeWebPage();
-        activePage->resumeView();
+        if (!backgroundTab) {
+            activePage->resumeView();
+        }
         return WebPageActivationData(activePage, false);
     }
 
@@ -151,14 +153,24 @@ WebPageActivationData WebPages::page(const Tab& tab, int parentId)
     if (!m_activePages.alive(tabId)) {
         webPage = m_pageFactory->createWebPage(m_webContainer, tab, parentId);
         if (webPage) {
-            m_activePages.prepend(tabId, webPage);
+            if (backgroundTab) {
+                m_activePages.append(tabId, webPage);
+            } else {
+                m_activePages.prepend(tabId, webPage);
+            }
         } else {
             return WebPageActivationData(nullptr, false);
         }
     }
 
-    DeclarativeWebPage *newActiveWebPage = m_activePages.activate(tabId);
-    updateStates(oldActiveWebPage, newActiveWebPage);
+    DeclarativeWebPage *newWebPage = 0;
+    if (!backgroundTab) {
+        DeclarativeWebPage *newActiveWebPage = m_activePages.activate(tabId);
+        updateStates(oldActiveWebPage, newActiveWebPage);
+        newWebPage = newActiveWebPage;
+    } else {
+        newWebPage = m_activePages.webPage(tabId);
+    }
 
 #if DEBUG_LOGS
     dumpPages();
@@ -168,7 +180,7 @@ WebPageActivationData WebPages::page(const Tab& tab, int parentId)
         handleMemNotify(m_memoryLevel);
     }
 
-    return WebPageActivationData(newActiveWebPage, true);
+    return WebPageActivationData(newWebPage, true);
 }
 
 void WebPages::release(int tabId)

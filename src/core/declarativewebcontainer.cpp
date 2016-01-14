@@ -169,6 +169,19 @@ void DeclarativeWebContainer::setWebPage(DeclarativeWebPage *webPage)
     }
 }
 
+void DeclarativeWebContainer::setBackgroundWebPage(DeclarativeWebPage *webPage)
+{
+    if (m_backgroundWebPage != webPage) {
+        m_backgroundWebPage = webPage;
+
+        if (m_webPage) {
+            // These signals are used for updating tab view
+            connect(m_webPage, SIGNAL(urlChanged()), m_model, SLOT(onUrlChanged()), Qt::UniqueConnection);
+            connect(m_webPage, SIGNAL(titleChanged()), m_model, SLOT(onTitleChanged()), Qt::UniqueConnection);
+        }
+    }
+}
+
 DeclarativeTabModel *DeclarativeWebContainer::tabModel() const
 {
     return m_model;
@@ -191,7 +204,7 @@ void DeclarativeWebContainer::setTabModel(DeclarativeTabModel *model)
             connect(m_model, SIGNAL(activeTabChanged(int,bool)), this, SIGNAL(tabIdChanged()));
             connect(m_model, SIGNAL(loadedChanged()), this, SLOT(initialize()));
             connect(m_model, SIGNAL(tabClosed(int)), this, SLOT(releasePage(int)));
-            connect(m_model, SIGNAL(newTabRequested(QString,QString,int)), this, SLOT(onNewTabRequested(QString,QString,int)));
+            connect(m_model, SIGNAL(newTabRequested(QString,QString,bool,int)), this, SLOT(onNewTabRequested(QString,QString,bool,int)));
             newCount = m_model->count();
         }
         emit tabModelChanged();
@@ -385,7 +398,7 @@ void DeclarativeWebContainer::load(QString url, QString title, bool force)
         m_initialUrl = url;
     } else if (m_model && m_model->count() == 0) {
         // Browser running all tabs are closed.
-        m_model->newTab(url, title);
+        m_model->newTab(url, title, false);
     }
 }
 
@@ -402,7 +415,7 @@ void DeclarativeWebContainer::reload(bool force)
             // Reload live active tab directly.
             m_webPage->reload();
         } else {
-            loadTab(m_model->activeTab(), force);
+            loadTab(m_model->activeTab(), false, force);
         }
     }
 }
@@ -423,7 +436,7 @@ void DeclarativeWebContainer::goBack()
     }
 }
 
-bool DeclarativeWebContainer::activatePage(const Tab& tab, bool force, int parentId)
+bool DeclarativeWebContainer::activatePage(const Tab& tab, bool backgroundTab, bool force, int parentId)
 {
     if (!m_model) {
         return false;
@@ -431,12 +444,16 @@ bool DeclarativeWebContainer::activatePage(const Tab& tab, bool force, int paren
 
     m_webPages->initialize(this);
     if ((m_model->loaded() || force) && tab.tabId() > 0 && m_webPages->initialized() && m_webPageComponent) {
-        WebPageActivationData activationData = m_webPages->page(tab, parentId);
-        setActiveTabRendered(false);
-        setWebPage(activationData.webPage);
-        // Reset always height so that orentation change is taken into account.
-        m_webPage->forceChrome(false);
-        m_webPage->setChrome(true);
+        WebPageActivationData activationData = m_webPages->page(tab, backgroundTab, parentId);
+        if (backgroundTab) {
+            setBackgroundWebPage(activationData.webPage);
+        } else {
+            setActiveTabRendered(false);
+            setWebPage(activationData.webPage);
+            // Reset always height so that orentation change is taken into account.
+            m_webPage->forceChrome(false);
+            m_webPage->setChrome(true);
+        }
         return activationData.activated;
     }
     return false;
@@ -745,13 +762,13 @@ void DeclarativeWebContainer::initialize()
     if (m_model->count() == 0 && (firstUseDone || !m_initialUrl.isEmpty())) {
         QString url = m_initialUrl.isEmpty() ? DeclarativeWebUtils::instance()->homePage() : m_initialUrl;
         QString title = "";
-        m_model->newTab(url, title);
+        m_model->newTab(url, title, false);
     } else if (m_model->count() > 0) {
         Tab tab = m_model->activeTab();
         if (!m_initialUrl.isEmpty()) {
             tab.setUrl(m_initialUrl);
         }
-        loadTab(tab, true);
+        loadTab(tab, false, false);
     }
 
     if (!m_completed) {
@@ -784,14 +801,18 @@ void DeclarativeWebContainer::onDownloadStarted()
     }
 }
 
-void DeclarativeWebContainer::onNewTabRequested(QString url, QString title, int parentId)
+void DeclarativeWebContainer::onNewTabRequested(QString url, QString title, bool backgroundTab, int parentId)
 {
     // TODO: Remove unused title argument.
     Q_UNUSED(title);
     Tab tab;
     tab.setTabId(m_model->nextTabId());
-    if (activatePage(tab, false, parentId)) {
-        m_webPage->loadTab(url, false);
+    if (activatePage(tab, backgroundTab, false, parentId)) {
+        if (backgroundTab) {
+            m_backgroundWebPage->loadTab(url, false);
+        } else {
+            m_webPage->loadTab(url, false);
+        }
     }
 }
 
@@ -895,13 +916,17 @@ bool DeclarativeWebContainer::canInitialize() const
     return QMozContext::GetInstance()->initialized() && m_model && m_model->loaded();
 }
 
-void DeclarativeWebContainer::loadTab(const Tab& tab, bool force)
+void DeclarativeWebContainer::loadTab(const Tab& tab, bool backgroundTab, bool force)
 {
-    if (activatePage(tab, true) || force) {
+    if (activatePage(tab, backgroundTab, true) || force) {
         // Note: active pages containing a "link" between each other (parent-child relationship)
         // are not destroyed automatically e.g. in low memory notification.
         // Hence, parentId is not necessary over here.
-        m_webPage->loadTab(tab.url(), force);
+        if (backgroundTab) {
+            m_backgroundWebPage->loadTab(tab.url(), force);
+        } else {
+            m_webPage->loadTab(tab.url(), force);
+        }
     }
 }
 

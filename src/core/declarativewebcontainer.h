@@ -123,7 +123,7 @@ public:
     QString thumbnailPath() const;
 
     bool isActiveTab(int tabId);
-    bool activatePage(const Tab& tab, bool force = false, int parentId = 0);
+    bool activatePage(const Tab& tab, bool backgroundTab, bool force = false, int parentId = 0);
     int findParentTabId(int tabId) const;
 
     Q_INVOKABLE void load(QString url = "", QString title = "", bool force = false);
@@ -196,7 +196,7 @@ private slots:
     void initialize();
     void onActiveTabChanged(int activeTabId, bool loadActiveTab);
     void onDownloadStarted();
-    void onNewTabRequested(QString url, QString title, int parentId);
+    void onNewTabRequested(QString url, QString title, bool backgroundTab, int parentId);
     void releasePage(int tabId);
     void closeWindow();
     void updateLoadProgress();
@@ -213,10 +213,11 @@ private slots:
 
 private:
     void setWebPage(DeclarativeWebPage *webPage);
+    void setBackgroundWebPage(DeclarativeWebPage *webPage);
     void setTabModel(DeclarativeTabModel *model);
     qreal contentHeight() const;
     bool canInitialize() const;
-    void loadTab(const Tab& tab, bool force);
+    void loadTab(const Tab& tab, bool backgroundTab, bool force);
     void updateMode();
     void setActiveTabRendered(bool rendered);
 
@@ -230,6 +231,8 @@ private:
     QScopedPointer<QMozWindow> m_mozWindow;
     QPointer<QQuickItem> m_rotationHandler;
     QPointer<DeclarativeWebPage> m_webPage;
+    // For loading new background tabs
+    QPointer<DeclarativeWebPage> m_backgroundWebPage;
     QPointer<QQuickView> m_chromeWindow;
     QOpenGLContext *m_context;
     QMutex m_contextMutex;

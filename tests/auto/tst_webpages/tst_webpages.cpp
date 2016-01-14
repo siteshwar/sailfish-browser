@@ -107,7 +107,7 @@ void tst_webpages::count()
     EXPECT_CALL(*page, uniqueID());
     EXPECT_CALL(*page, parentId());
     EXPECT_CALL(*page, completed());
-    m_webPages->page(Tab(1, "http://example.com", "Test title", ""));
+    m_webPages->page(Tab(1, "http://example.com", "Test title", ""), false);
     QCOMPARE(m_webPages->count(), 1);
 }
 
@@ -182,7 +182,7 @@ void tst_webpages::page()
             EXPECT_CALL(*page, loading()).WillOnce(Return(false));
         }
 
-        m_webPages->page(initialTab);
+        m_webPages->page(initialTab, false);
     }
 
 
@@ -261,7 +261,7 @@ void tst_webpages::release()
         EXPECT_CALL(*page, suspendView()).Times(AnyNumber());
 
         EXPECT_CALL(m_pageFactory, createWebPage(_, _, _)).WillOnce(Return(page));
-        m_webPages->page(initialTab);
+        m_webPages->page(initialTab, false);
     }
 
     m_webPages->release(tabId);
@@ -297,7 +297,7 @@ void tst_webpages::clear()
         EXPECT_CALL(*page, contentRect()).Times(AnyNumber()).WillRepeatedly(Return(QRectF()));
 
         EXPECT_CALL(m_pageFactory, createWebPage(_, _, _)).WillOnce(Return(page));
-        m_webPages->page(initialTab);
+        m_webPages->page(initialTab, false);
     }
 
     m_webPages->clear();
@@ -344,7 +344,7 @@ void tst_webpages::parentTabId()
         EXPECT_CALL(*page, contentRect()).Times(AnyNumber()).WillRepeatedly(Return(QRectF()));
 
         EXPECT_CALL(m_pageFactory, createWebPage(_, _, _)).WillOnce(Return(page));
-        m_webPages->page(initialTab);
+        m_webPages->page(initialTab, false);
     }
 
     QCOMPARE(m_webPages->parentTabId(tabId), expectedParentId);

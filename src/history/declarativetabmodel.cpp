@@ -171,10 +171,13 @@ void DeclarativeTabModel::closeActiveTab()
     }
 }
 
-void DeclarativeTabModel::newTab(const QString &url, const QString &title, int parentId)
+void DeclarativeTabModel::newTab(const QString &url, const QString &title, bool backgroundTab, int parentId)
 {
-    setWaitingForNewTab(true);
-    emit newTabRequested(url, title, parentId);
+    if (!backgroundTab) {
+        setWaitingForNewTab(true);
+    }
+
+    emit newTabRequested(url, title, backgroundTab, parentId);
 }
 
 QString DeclarativeTabModel::url(int tabId) const
